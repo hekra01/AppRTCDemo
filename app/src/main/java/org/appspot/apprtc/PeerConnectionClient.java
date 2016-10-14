@@ -13,6 +13,8 @@ package org.appspot.apprtc;
 import org.appspot.apprtc.AppRTCClient.SignalingParameters;
 
 import android.content.Context;
+import android.content.Intent;
+import android.media.projection.MediaProjection;
 import android.os.Environment;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
@@ -550,8 +552,19 @@ public class PeerConnectionClient {
     mediaStream = factory.createLocalMediaStream("ARDAMS");
     if (videoCallEnabled) {
       if (numberOfCameras == 0) {
-        //TODO Create VideoCapturer
-        videoCapturer = new ScreenCapturerAndroid(null, null);
+        //TODO Create ScreenCapturer
+        MediaProjection.Callback mediaProjectionCallback = null;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+          mediaProjectionCallback = new MediaProjection.Callback() {
+
+            @Override
+            public void onStop() {
+              super.onStop();
+            }
+          };
+        }
+
+        videoCapturer = new ScreenCapturerAndroid((Intent) null, mediaProjectionCallback);
       }
       else {
         if (peerConnectionParameters.useCamera2) {

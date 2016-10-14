@@ -16,11 +16,18 @@ import android.content.Context;
 import android.content.Intent;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
+import android.media.MediaCodec;
+import android.media.MediaCodecInfo;
+import android.media.MediaFormat;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
+import android.util.Log;
 import android.view.Surface;
 
-import java.util.ArrayList;
+import org.appspot.apprtc.R;
+import org.appspot.apprtc.util.Utils;
+
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -41,6 +48,8 @@ public class ScreenCapturerAndroid
             DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC | DisplayManager.VIRTUAL_DISPLAY_FLAG_PRESENTATION;
     // DPI for VirtualDisplay, does not seem to matter for us.
     private static final int VIRTUAL_DISPLAY_DPI = 400;
+    public static final String TAG = "ScreenCapturerAndroid";
+    private static final String MIMETYPE = "video/avc";
 
     private final Intent mediaProjectionPermissionResultData;
     private final MediaProjection.Callback mediaProjectionCallback;
@@ -54,6 +63,8 @@ public class ScreenCapturerAndroid
     private MediaProjection mediaProjection;
     private boolean isDisposed = false;
     private MediaProjectionManager mediaProjectionManager;
+    private Context context;
+    private MediaCodec videoEncoder;
 
     /**
      * Constructs a new Screen Capturer.
@@ -84,6 +95,7 @@ public class ScreenCapturerAndroid
     @Override
     public synchronized void initialize(final SurfaceTextureHelper surfaceTextureHelper,
                                         final Context applicationContext, final VideoCapturer.CapturerObserver capturerObserver) {
+        Log.d(TAG, "initialize");
         checkNotDisposed();
 
         if (capturerObserver == null) {
@@ -98,15 +110,23 @@ public class ScreenCapturerAndroid
 
         mediaProjectionManager = (MediaProjectionManager) applicationContext.getSystemService(
                 Context.MEDIA_PROJECTION_SERVICE);
+        this.context = applicationContext;
     }
 
     @Override
     public synchronized void startCapture(
             final int width, final int height, final int ignoredFramerate) {
         checkNotDisposed();
-
+        Log.d(TAG, "startCapture w " + width +  " h " + height + " ignoredFramerate " + ignoredFramerate);
         this.width = width;
         this.height = height;
+
+        try {
+            this.videoEncoder = createVideoEncoder();
+        }
+        catch (IOException e) {
+            throw new Error(e);
+        }
 
         mediaProjection = mediaProjectionManager.getMediaProjection(
                 Activity.RESULT_OK, mediaProjectionPermissionResultData);
@@ -122,11 +142,18 @@ public class ScreenCapturerAndroid
     @Override
     public synchronized void stopCapture() {
         checkNotDisposed();
+        Log.d(TAG, "stopCapture");
         ThreadUtils.invokeAtFrontUninterruptibly(surfaceTextureHelper.getHandler(), new Runnable() {
             @Override
             public void run() {
                 surfaceTextureHelper.stopListening();
                 capturerObserver.onCapturerStopped();
+
+                if (videoEncoder != null) {
+                    videoEncoder.stop();
+                    videoEncoder.release();
+                    videoEncoder = null;
+                }
 
                 if (virtualDisplay != null) {
                     virtualDisplay.release();
@@ -194,11 +221,14 @@ public class ScreenCapturerAndroid
         });
     }
 
+    @TODO (msg = "Later check if input surface correct")
     private void createVirtualDisplay() {
         surfaceTextureHelper.getSurfaceTexture().setDefaultBufferSize(width, height);
         virtualDisplay = mediaProjection.createVirtualDisplay("WebRTC_ScreenCapture", width, height,
-                VIRTUAL_DISPLAY_DPI, DISPLAY_FLAGS, new Surface(surfaceTextureHelper.getSurfaceTexture()),
+                VIRTUAL_DISPLAY_DPI, DISPLAY_FLAGS, videoEncoder.createInputSurface(),
                 null /* callback */, null /* callback handler */);
+
+        videoEncoder.start();
     }
 
     // This is called on the internal looper thread of {@Code SurfaceTextureHelper}.
@@ -217,4 +247,29 @@ public class ScreenCapturerAndroid
     public long getNumCapturedFrames() {
         return numCapturedFrames;
     }
+
+    private MediaCodec createVideoEncoder() throws IOException {
+        Log.i(TAG, "createVideoEncoder");
+        int w = width;
+        int h = height;
+        int fps = context.getResources().getInteger(R.integer.fps);
+        int bitrate = context.getResources().getInteger(R.integer.bitrate);
+        boolean allow_soft_video_encoder = context.getResources().getBoolean(R.bool.allow_soft_video_encoder);
+        String encoderName = Utils.getHWEncoder("video/avc", w, h, fps, allow_soft_video_encoder);// this.metrics.widthPixels, this.metrics.heightPixels, streamConfig.getFps());
+        if (encoderName == null) {
+            capturerObserver.onCapturerStopped();
+            throw new IOException("no H/W encoder supporting mimetype:video/avc");
+        }
+
+        MediaCodec mVideoMediaCodec = MediaCodec.createByCodecName(encoderName);// debugger.getEncoderName());
+        MediaFormat mediaFormat = MediaFormat.createVideoFormat(MIMETYPE, w, h);
+        mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
+        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitrate);
+        mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, fps);
+        mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
+        mVideoMediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+        Log.i(TAG, "initVideoMediaRecorder Ok ");
+        return mVideoMediaCodec;
+    }
+
 }
