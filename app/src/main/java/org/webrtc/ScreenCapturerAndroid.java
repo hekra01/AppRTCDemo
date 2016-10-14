@@ -78,7 +78,7 @@ public class ScreenCapturerAndroid
 
     @Override
     public List<CameraEnumerationAndroid.CaptureFormat> getSupportedFormats() {
-        throw new Error("To be implemented by hekra@cisco.com");
+        return null;
     }
 
     @Override
@@ -145,8 +145,15 @@ public class ScreenCapturerAndroid
     }
 
     @Override
-    public void onOutputFormatRequest(int i, int i1, int i2) {
-        throw new Error("To be implemented by hekra@cisco.com");
+    public synchronized void onOutputFormatRequest(
+            final int width, final int height, final int framerate) {
+        checkNotDisposed();
+        surfaceTextureHelper.getHandler().post(new Runnable() {
+            @Override
+            public void run() {
+                capturerObserver.onOutputFormatRequest(width, height, framerate);
+            }
+        });
     }
 
     @Override

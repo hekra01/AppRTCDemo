@@ -34,10 +34,12 @@ import org.webrtc.MediaStream;
 import org.webrtc.PeerConnection;
 import org.webrtc.PeerConnection.IceConnectionState;
 import org.webrtc.PeerConnectionFactory;
+import org.webrtc.ScreenCapturerAndroid;
 import org.webrtc.SdpObserver;
 import org.webrtc.SessionDescription;
 import org.webrtc.StatsObserver;
 import org.webrtc.StatsReport;
+import org.webrtc.TODO;
 import org.webrtc.VideoCapturer;
 import org.webrtc.VideoRenderer;
 import org.webrtc.VideoSource;
@@ -130,7 +132,7 @@ public class PeerConnectionClient {
   private SessionDescription localSdp; // either offer or answer SDP
   private MediaStream mediaStream;
   private int numberOfCameras;
-  private CameraVideoCapturer videoCapturer;
+  private VideoCapturer videoCapturer;
   // enableVideo is set to true if video should be rendered and sent.
   private boolean renderVideo;
   private VideoTrack localVideoTrack;
@@ -404,6 +406,7 @@ public class PeerConnectionClient {
     Log.d(TAG, "Peer connection factory created.");
   }
 
+  @TODO (msg = "Later check what CameraEnumerationAndroid.getDeviceCount() returns in docker")
   private void createMediaConstraintsInternal() {
     // Create peer connection constraints.
     pcConstraints = new MediaConstraints();
@@ -417,10 +420,10 @@ public class PeerConnectionClient {
     }
 
     // Check if there is a camera on device and disable video call if not.
-    numberOfCameras = CameraEnumerationAndroid.getDeviceCount();
+    numberOfCameras = 0;//CameraEnumerationAndroid.getDeviceCount();
     if (numberOfCameras == 0) {
       Log.w(TAG, "No camera on device. Switch to audio only call.");
-      videoCallEnabled = false;
+      //videoCallEnabled = false;
     }
     // Create video constraints if video call is enabled.
     if (videoCallEnabled) {
@@ -506,6 +509,7 @@ public class PeerConnectionClient {
     }
   }
 
+  @TODO(msg = "Create VideoCapturer")
   private void createPeerConnectionInternal(EglBase.Context renderEGLContext) {
     if (factory == null || isError) {
       Log.e(TAG, "Peerconnection factory is not created");
@@ -545,17 +549,23 @@ public class PeerConnectionClient {
 
     mediaStream = factory.createLocalMediaStream("ARDAMS");
     if (videoCallEnabled) {
-      if (peerConnectionParameters.useCamera2) {
-        if (!peerConnectionParameters.captureToTexture) {
-          reportError(context.getString(R.string.camera2_texture_only_error));
-          return;
-        }
+      if (numberOfCameras == 0) {
+        //TODO Create VideoCapturer
+        videoCapturer = new ScreenCapturerAndroid(null, null);
+      }
+      else {
+        if (peerConnectionParameters.useCamera2) {
+          if (!peerConnectionParameters.captureToTexture) {
+            reportError(context.getString(R.string.camera2_texture_only_error));
+            return;
+          }
 
-        Logging.d(TAG, "Creating capturer using camera2 API.");
-        createCapturer(new Camera2Enumerator(context));
-      } else {
-        Logging.d(TAG, "Creating capturer using camera1 API.");
-        createCapturer(new Camera1Enumerator(peerConnectionParameters.captureToTexture));
+          Logging.d(TAG, "Creating capturer using camera2 API.");
+          createCapturer(new Camera2Enumerator(context));
+        } else {
+          Logging.d(TAG, "Creating capturer using camera1 API.");
+          createCapturer(new Camera1Enumerator(peerConnectionParameters.captureToTexture));
+        }
       }
 
       if (videoCapturer == null) {
@@ -991,7 +1001,7 @@ public class PeerConnectionClient {
       return;  // No video is sent or only one camera is available or error happened.
     }
     Log.d(TAG, "Switch camera");
-    videoCapturer.switchCamera(null);
+    ((CameraVideoCapturer)videoCapturer).switchCamera(null);
   }
 
   public void switchCamera() {
