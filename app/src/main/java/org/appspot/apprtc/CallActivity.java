@@ -48,6 +48,8 @@ public class CallActivity extends Activity
       PeerConnectionClient.PeerConnectionEvents,
       CallFragment.OnCallEvents {
 
+  public static final String EXTRA_CAPTURE_DESKTOP =
+          "org.appspot.apprtc.DESKTOP";
   public static final String EXTRA_ROOMID =
       "org.appspot.apprtc.ROOMID";
   public static final String EXTRA_LOOPBACK =
@@ -237,6 +239,7 @@ public class CallActivity extends Activity
         && intent.getBooleanExtra(EXTRA_CAMERA2, true);
 
     peerConnectionParameters = new PeerConnectionParameters(
+        intent.getBooleanExtra(EXTRA_CAPTURE_DESKTOP, true),
         intent.getBooleanExtra(EXTRA_VIDEO_CALL, true),
         loopback,
         tracing,

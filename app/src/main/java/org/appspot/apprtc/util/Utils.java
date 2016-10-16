@@ -44,6 +44,7 @@ public class Utils {
 
     public static String getHWEncoder(String mimeType, int w, int h, int fps, boolean softEncoderAllowed) {
         Log.d(TAG, "##   Utils.getHWEncoder looking for HW encoder for mime type =" + mimeType + " size =" + w + "x" + h + ", fps=" + fps + ", Soft-Encoder-Allowed = " + softEncoderAllowed);
+
         int numCodecs = MediaCodecList.getCodecCount();
 
         List<MediaCodecInfo> availables = new ArrayList<>();

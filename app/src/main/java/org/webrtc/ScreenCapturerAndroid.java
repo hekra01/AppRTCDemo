@@ -21,6 +21,7 @@ import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
+import android.os.Handler;
 import android.util.Log;
 import android.view.Surface;
 
@@ -50,6 +51,7 @@ public class ScreenCapturerAndroid
     private static final int VIRTUAL_DISPLAY_DPI = 400;
     public static final String TAG = "ScreenCapturerAndroid";
     private static final String MIMETYPE = "video/avc";
+    private static final boolean VENC = false;
 
     private final Intent mediaProjectionPermissionResultData;
     private final MediaProjection.Callback mediaProjectionCallback;
@@ -65,6 +67,7 @@ public class ScreenCapturerAndroid
     private MediaProjectionManager mediaProjectionManager;
     private Context context;
     private MediaCodec videoEncoder;
+    private Handler surfaceThread;
 
     /**
      * Constructs a new Screen Capturer.
@@ -111,6 +114,7 @@ public class ScreenCapturerAndroid
         mediaProjectionManager = (MediaProjectionManager) applicationContext.getSystemService(
                 Context.MEDIA_PROJECTION_SERVICE);
         this.context = applicationContext;
+        this.surfaceThread = surfaceTextureHelper == null?null:surfaceTextureHelper.getHandler();
     }
 
     @Override
@@ -121,11 +125,13 @@ public class ScreenCapturerAndroid
         this.width = width;
         this.height = height;
 
-        try {
-            this.videoEncoder = createVideoEncoder();
-        }
-        catch (IOException e) {
-            throw new Error(e);
+        if (VENC) {
+            try {
+                this.videoEncoder = createVideoEncoder();
+            }
+            catch (IOException e) {
+                throw new Error(e);
+            }
         }
 
         mediaProjection = mediaProjectionManager.getMediaProjection(
@@ -149,10 +155,12 @@ public class ScreenCapturerAndroid
                 surfaceTextureHelper.stopListening();
                 capturerObserver.onCapturerStopped();
 
-                if (videoEncoder != null) {
-                    videoEncoder.stop();
-                    videoEncoder.release();
-                    videoEncoder = null;
+                if (VENC) {
+                    if (videoEncoder != null) {
+                        videoEncoder.stop();
+                        videoEncoder.release();
+                        videoEncoder = null;
+                    }
                 }
 
                 if (virtualDisplay != null) {
@@ -223,12 +231,35 @@ public class ScreenCapturerAndroid
 
     @TODO (msg = "Later check if input surface correct")
     private void createVirtualDisplay() {
-        surfaceTextureHelper.getSurfaceTexture().setDefaultBufferSize(width, height);
-        virtualDisplay = mediaProjection.createVirtualDisplay("WebRTC_ScreenCapture", width, height,
-                VIRTUAL_DISPLAY_DPI, DISPLAY_FLAGS, videoEncoder.createInputSurface(),
-                null /* callback */, null /* callback handler */);
+        VirtualDisplay.Callback callback = new VirtualDisplay.Callback() {
+            @Override
+            public void onPaused() {
+                Log.d(TAG,">>Capturer.onPaused");
+            }
 
-        videoEncoder.start();
+            @Override
+            public void onStopped() {
+                Log.d(TAG,">>Capturer.onStopped");
+            }
+
+            @Override
+            public void onResumed() {
+                Log.d(TAG,">>Capturer.onResumed");
+            }
+        };
+
+        surfaceTextureHelper.getSurfaceTexture().setDefaultBufferSize(width, height);
+        if (VENC) {
+            virtualDisplay = mediaProjection.createVirtualDisplay("WebRTC_ScreenCapture", width, height,
+                    VIRTUAL_DISPLAY_DPI, DISPLAY_FLAGS, videoEncoder.createInputSurface() /*new Surface (surfaceTextureHelper.getSurfaceTexture())*/,
+                    callback /* callback */, null /* callback handler */);
+            videoEncoder.start();
+        }
+        else {
+            virtualDisplay = mediaProjection.createVirtualDisplay("WebRTC_ScreenCapture", width, height,
+                    VIRTUAL_DISPLAY_DPI, DISPLAY_FLAGS, new Surface(surfaceTextureHelper.getSurfaceTexture()),
+                    callback /* callback */, null /* callback handler */);
+        }
     }
 
     // This is called on the internal looper thread of {@Code SurfaceTextureHelper}.
@@ -255,7 +286,7 @@ public class ScreenCapturerAndroid
         int fps = context.getResources().getInteger(R.integer.fps);
         int bitrate = context.getResources().getInteger(R.integer.bitrate);
         boolean allow_soft_video_encoder = context.getResources().getBoolean(R.bool.allow_soft_video_encoder);
-        String encoderName = Utils.getHWEncoder("video/avc", w, h, fps, allow_soft_video_encoder);// this.metrics.widthPixels, this.metrics.heightPixels, streamConfig.getFps());
+        String encoderName = Utils.getHWEncoder(MIMETYPE, w, h, fps, allow_soft_video_encoder);// this.metrics.widthPixels, this.metrics.heightPixels, streamConfig.getFps());
         if (encoderName == null) {
             capturerObserver.onCapturerStopped();
             throw new IOException("no H/W encoder supporting mimetype:video/avc");

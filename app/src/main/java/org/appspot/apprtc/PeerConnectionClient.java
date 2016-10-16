@@ -142,6 +142,7 @@ public class PeerConnectionClient {
   // enableAudio is set to true if audio should be sent.
   private boolean enableAudio;
   private AudioTrack localAudioTrack;
+  private boolean desktop;
 
   /**
    * Peer connection parameters.
@@ -167,8 +168,9 @@ public class PeerConnectionClient {
     public final boolean disableBuiltInAGC;
     public final boolean disableBuiltInNS;
     public final boolean enableLevelControl;
+    private final boolean desktop;
 
-    public PeerConnectionParameters(
+    public PeerConnectionParameters(boolean desktop,
         boolean videoCallEnabled, boolean loopback, boolean tracing, boolean useCamera2,
         int videoWidth, int videoHeight, int videoFps,
         int videoStartBitrate, String videoCodec, boolean videoCodecHwAcceleration,
@@ -176,6 +178,7 @@ public class PeerConnectionClient {
         boolean noAudioProcessing, boolean aecDump, boolean useOpenSLES,
         boolean disableBuiltInAEC, boolean disableBuiltInAGC, boolean disableBuiltInNS,
         boolean enableLevelControl) {
+      this.desktop = desktop;
       this.videoCallEnabled = videoCallEnabled;
       this.useCamera2 = useCamera2;
       this.loopback = loopback;
@@ -268,6 +271,7 @@ public class PeerConnectionClient {
     this.peerConnectionParameters = peerConnectionParameters;
     this.events = events;
     videoCallEnabled = peerConnectionParameters.videoCallEnabled;
+    desktop = peerConnectionParameters.desktop;
     // Reset variables to initial states.
     this.context = null;
     factory = null;
@@ -422,7 +426,7 @@ public class PeerConnectionClient {
     }
 
     // Check if there is a camera on device and disable video call if not.
-    numberOfCameras = 0;//CameraEnumerationAndroid.getDeviceCount();
+    numberOfCameras = CameraEnumerationAndroid.getDeviceCount();
     if (numberOfCameras == 0) {
       Log.w(TAG, "No camera on device. Switch to audio only call.");
       //videoCallEnabled = false;
@@ -551,7 +555,7 @@ public class PeerConnectionClient {
 
     mediaStream = factory.createLocalMediaStream("ARDAMS");
     if (videoCallEnabled) {
-      if (numberOfCameras == 0) {
+      if (desktop) {
         //TODO Create ScreenCapturer
         MediaProjection.Callback mediaProjectionCallback = null;
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
@@ -563,7 +567,6 @@ public class PeerConnectionClient {
             }
           };
         }
-
         videoCapturer = new ScreenCapturerAndroid((Intent) null, mediaProjectionCallback);
       }
       else {
