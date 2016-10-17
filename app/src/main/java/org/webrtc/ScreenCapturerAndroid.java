@@ -53,7 +53,7 @@ public class ScreenCapturerAndroid
     private static final String MIMETYPE = "video/avc";
     private static final boolean VENC = false;
 
-    private final Intent mediaProjectionPermissionResultData;
+    private Intent mediaProjectionPermissionResultData;
     private final MediaProjection.Callback mediaProjectionCallback;
 
     private int width;
@@ -113,6 +113,7 @@ public class ScreenCapturerAndroid
 
         mediaProjectionManager = (MediaProjectionManager) applicationContext.getSystemService(
                 Context.MEDIA_PROJECTION_SERVICE);
+        mediaProjectionPermissionResultData = mediaProjectionManager.createScreenCaptureIntent();
         this.context = applicationContext;
         this.surfaceThread = surfaceTextureHelper == null?null:surfaceTextureHelper.getHandler();
     }

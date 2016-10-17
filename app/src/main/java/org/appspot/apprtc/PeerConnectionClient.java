@@ -97,8 +97,7 @@ public class PeerConnectionClient {
   private static final int MAX_VIDEO_HEIGHT = 1280;
   private static final int MAX_VIDEO_FPS = 30;
 
-  //private static final PeerConnectionClient instance = new PeerConnectionClient(intent);
-  private  static final HashMap MAP = new HashMap();
+  private static final PeerConnectionClient instance = new PeerConnectionClient();
   private final PCObserver pcObserver = new PCObserver();
   private final SDPObserver sdpObserver = new SDPObserver();
   private final ScheduledExecutorService executor;
@@ -144,7 +143,6 @@ public class PeerConnectionClient {
   private boolean enableAudio;
   private AudioTrack localAudioTrack;
   private boolean desktop;
-  private Intent intent;
 
   /**
    * Peer connection parameters.
@@ -251,21 +249,15 @@ public class PeerConnectionClient {
     void onPeerConnectionError(final String description);
   }
 
-  private PeerConnectionClient(Intent intent) {
-    this.intent = intent;
+  private PeerConnectionClient() {
     // Executor thread is started once in private ctor and is used for all
     // peer connection API calls to ensure new peer connection factory is
     // created on the same thread as previously destroyed factory.
     executor = Executors.newSingleThreadScheduledExecutor();
   }
 
-  public static PeerConnectionClient getInstance(Intent intent) {
-    PeerConnectionClient client = (PeerConnectionClient) MAP.get(intent);
-    if (client == null) {
-      client = new PeerConnectionClient(intent);
-      MAP.put(intent, client);
-    }
-    return client;
+  public static PeerConnectionClient getInstance() {
+    return instance;
   }
 
   public void setPeerConnectionFactoryOptions(PeerConnectionFactory.Options options) {
@@ -325,6 +317,7 @@ public class PeerConnectionClient {
           createMediaConstraintsInternal();
           createPeerConnectionInternal(renderEGLContext);
         } catch (Exception e) {
+          e.printStackTrace();
           reportError("Failed to create peer connection: " + e.getMessage());
           throw e;
         }
@@ -570,7 +563,7 @@ public class PeerConnectionClient {
             super.onStop();
           }
         };
-        videoCapturer = new ScreenCapturerAndroid(intent, mediaProjectionCallback);
+        videoCapturer = new ScreenCapturerAndroid(null, mediaProjectionCallback);
       }
       else {
         if (peerConnectionParameters.useCamera2) {

@@ -9,6 +9,9 @@ android {
     jni.srcDirs = [] //disable automatic ndk-build call
   }
 
+  dexOptions {
+    javaMaxHeapSize "4g"
+  }
 
   defaultConfig {
     applicationId "org.appspot.apprtc"
