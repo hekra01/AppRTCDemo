@@ -299,7 +299,7 @@ public class CallActivity extends Activity
       }, runTimeMs);
     }
 
-    peerConnectionClient = PeerConnectionClient.getInstance();
+    peerConnectionClient = PeerConnectionClient.getInstance(getIntent());
     if (loopback) {
       PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();
       options.networkIgnoreMask = 0;

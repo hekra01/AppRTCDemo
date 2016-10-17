@@ -31,7 +31,6 @@ import org.webrtc.EglBase;
 import org.webrtc.IceCandidate;
 import org.webrtc.Logging;
 import org.webrtc.MediaConstraints;
-import org.webrtc.MediaConstraints.KeyValuePair;
 import org.webrtc.MediaStream;
 import org.webrtc.PeerConnection;
 import org.webrtc.PeerConnection.IceConnectionState;
@@ -52,6 +51,7 @@ import org.webrtc.voiceengine.WebRtcAudioUtils;
 import java.io.File;
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -97,7 +97,8 @@ public class PeerConnectionClient {
   private static final int MAX_VIDEO_HEIGHT = 1280;
   private static final int MAX_VIDEO_FPS = 30;
 
-  private static final PeerConnectionClient instance = new PeerConnectionClient();
+  //private static final PeerConnectionClient instance = new PeerConnectionClient(intent);
+  private  static final HashMap MAP = new HashMap();
   private final PCObserver pcObserver = new PCObserver();
   private final SDPObserver sdpObserver = new SDPObserver();
   private final ScheduledExecutorService executor;
@@ -143,6 +144,7 @@ public class PeerConnectionClient {
   private boolean enableAudio;
   private AudioTrack localAudioTrack;
   private boolean desktop;
+  private Intent intent;
 
   /**
    * Peer connection parameters.
@@ -249,15 +251,21 @@ public class PeerConnectionClient {
     void onPeerConnectionError(final String description);
   }
 
-  private PeerConnectionClient() {
+  private PeerConnectionClient(Intent intent) {
+    this.intent = intent;
     // Executor thread is started once in private ctor and is used for all
     // peer connection API calls to ensure new peer connection factory is
     // created on the same thread as previously destroyed factory.
     executor = Executors.newSingleThreadScheduledExecutor();
   }
 
-  public static PeerConnectionClient getInstance() {
-    return instance;
+  public static PeerConnectionClient getInstance(Intent intent) {
+    PeerConnectionClient client = (PeerConnectionClient) MAP.get(intent);
+    if (client == null) {
+      client = new PeerConnectionClient(intent);
+      MAP.put(intent, client);
+    }
+    return client;
   }
 
   public void setPeerConnectionFactoryOptions(PeerConnectionFactory.Options options) {
@@ -556,18 +564,13 @@ public class PeerConnectionClient {
     mediaStream = factory.createLocalMediaStream("ARDAMS");
     if (videoCallEnabled) {
       if (desktop) {
-        //TODO Create ScreenCapturer
-        MediaProjection.Callback mediaProjectionCallback = null;
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-          mediaProjectionCallback = new MediaProjection.Callback() {
-
-            @Override
-            public void onStop() {
-              super.onStop();
-            }
-          };
-        }
-        videoCapturer = new ScreenCapturerAndroid((Intent) null, mediaProjectionCallback);
+        MediaProjection.Callback mediaProjectionCallback = new MediaProjection.Callback() {
+          @Override
+          public void onStop() {
+            super.onStop();
+          }
+        };
+        videoCapturer = new ScreenCapturerAndroid(intent, mediaProjectionCallback);
       }
       else {
         if (peerConnectionParameters.useCamera2) {
