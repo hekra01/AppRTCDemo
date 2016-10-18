@@ -26,6 +26,7 @@ import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Trace;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
@@ -371,9 +372,10 @@ public class CallActivity extends Activity
   @Override
   public void onPause() {
     super.onPause();
+
     activityRunning = false;
     if (peerConnectionClient != null) {
-      peerConnectionClient.stopVideoSource();
+      //peerConnectionClient.stopVideoSource();
     }
     cpuMonitor.pause();
   }
