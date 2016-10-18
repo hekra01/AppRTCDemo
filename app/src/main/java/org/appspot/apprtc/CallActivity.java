@@ -161,6 +161,7 @@ public class CallActivity extends Activity
   private CpuMonitor cpuMonitor;
   private Intent mResultData;
   private int mResultCode;
+  private final Object lock = new Object();
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
@@ -340,13 +341,26 @@ public class CallActivity extends Activity
 
   @TODO(msg = "Later find better option for getting cb")
   private void initMediaProjection() {
+    Log.i(TAG, "initMediaProjection mResultData = " + mResultData);
     if (mResultData == null) {
       MediaProjectionManager mp = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
       startActivityForResult(mp.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION);
     }
   }
 
+  private void waitForProj(){
+    synchronized (lock) {
+      while (mResultData == null)
+        try {
+          lock.wait(500);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+    }
+  }
+
   public void onActivityResult(int requestCode, int resultCode, Intent data) {
+    Log.i(TAG, "onActivityResult requestCode = " + requestCode + " resultCode " + resultCode + " data " + data);
     if (requestCode == REQUEST_MEDIA_PROJECTION) {
       if (resultCode != Activity.RESULT_OK) {
         Log.i(TAG, "User cancelled");
@@ -359,12 +373,12 @@ public class CallActivity extends Activity
   }
 
   public Intent getMediaProjectionResultData() {
-    initMediaProjection();
+    waitForProj();
     return mResultData;
   }
 
   public int getMediaProjectionResultCode() {
-    initMediaProjection();
+    waitForProj();
     return mResultCode;
   }
 

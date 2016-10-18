@@ -3,6 +3,7 @@ apply plugin: 'com.android.application'
 android {
   compileSdkVersion 23
   buildToolsVersion '24'
+  project.ext.set("archivesBaseName", "apprtc")
 
   sourceSets.main {
     jniLibs.srcDir 'libs'
@@ -15,8 +16,8 @@ android {
 
   defaultConfig {
     applicationId "org.appspot.apprtc"
-    minSdkVersion 21
-    targetSdkVersion 21
+    minSdkVersion 22
+    targetSdkVersion 23
 
     versionCode 13665
     versionName "r13665"
