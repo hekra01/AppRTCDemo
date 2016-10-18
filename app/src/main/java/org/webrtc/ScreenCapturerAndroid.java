@@ -113,7 +113,6 @@ public class ScreenCapturerAndroid
 
         mediaProjectionManager = (MediaProjectionManager) applicationContext.getSystemService(
                 Context.MEDIA_PROJECTION_SERVICE);
-        mediaProjectionPermissionResultData = mediaProjectionManager.createScreenCaptureIntent();
         this.context = applicationContext;
         this.surfaceThread = surfaceTextureHelper == null?null:surfaceTextureHelper.getHandler();
     }
@@ -232,40 +231,24 @@ public class ScreenCapturerAndroid
 
     @TODO (msg = "Later check if input surface correct")
     private void createVirtualDisplay() {
-        VirtualDisplay.Callback callback = new VirtualDisplay.Callback() {
-            @Override
-            public void onPaused() {
-                Log.d(TAG,">>Capturer.onPaused");
-            }
-
-            @Override
-            public void onStopped() {
-                Log.d(TAG,">>Capturer.onStopped");
-            }
-
-            @Override
-            public void onResumed() {
-                Log.d(TAG,">>Capturer.onResumed");
-            }
-        };
-
         surfaceTextureHelper.getSurfaceTexture().setDefaultBufferSize(width, height);
         if (VENC) {
             virtualDisplay = mediaProjection.createVirtualDisplay("WebRTC_ScreenCapture", width, height,
                     VIRTUAL_DISPLAY_DPI, DISPLAY_FLAGS, videoEncoder.createInputSurface() /*new Surface (surfaceTextureHelper.getSurfaceTexture())*/,
-                    callback /* callback */, null /* callback handler */);
+                    null, null);
             videoEncoder.start();
         }
         else {
             virtualDisplay = mediaProjection.createVirtualDisplay("WebRTC_ScreenCapture", width, height,
                     VIRTUAL_DISPLAY_DPI, DISPLAY_FLAGS, new Surface(surfaceTextureHelper.getSurfaceTexture()),
-                    callback /* callback */, null /* callback handler */);
+                    null, null);
         }
     }
 
     // This is called on the internal looper thread of {@Code SurfaceTextureHelper}.
     @Override
     public void onTextureFrameAvailable(int oesTextureId, float[] transformMatrix, long timestampNs) {
+        Log.d(TAG, "onTextureFrameAvailable " + numCapturedFrames);
         numCapturedFrames++;
         capturerObserver.onTextureFrameCaptured(
                 width, height, oesTextureId, transformMatrix, 0 /* rotation */, timestampNs);

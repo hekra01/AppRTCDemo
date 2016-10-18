@@ -12,6 +12,7 @@ package org.appspot.apprtc;
 
 import org.appspot.apprtc.AppRTCClient.SignalingParameters;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.media.projection.MediaProjection;
@@ -102,7 +103,7 @@ public class PeerConnectionClient {
   private final SDPObserver sdpObserver = new SDPObserver();
   private final ScheduledExecutorService executor;
 
-  private Context context;
+  private CallActivity context;
   private PeerConnectionFactory factory;
   private PeerConnection peerConnection;
   PeerConnectionFactory.Options options = null;
@@ -265,7 +266,7 @@ public class PeerConnectionClient {
   }
 
   public void createPeerConnectionFactory(
-      final Context context,
+      final CallActivity context,
       final PeerConnectionParameters peerConnectionParameters,
       final PeerConnectionEvents events) {
     this.peerConnectionParameters = peerConnectionParameters;
@@ -338,7 +339,7 @@ public class PeerConnectionClient {
     return videoCallEnabled;
   }
 
-  private void createPeerConnectionFactoryInternal(Context context) {
+  private void createPeerConnectionFactoryInternal(CallActivity context) {
       PeerConnectionFactory.initializeInternalTracer();
       if (peerConnectionParameters.tracing) {
           PeerConnectionFactory.startInternalTracingCapture(
@@ -477,7 +478,7 @@ public class PeerConnectionClient {
     sdpMediaConstraints = new MediaConstraints();
     sdpMediaConstraints.mandatory.add(new MediaConstraints.KeyValuePair(
         "OfferToReceiveAudio", "true"));
-    if (videoCallEnabled || peerConnectionParameters.loopback) {
+    if ((videoCallEnabled &&!desktop) || peerConnectionParameters.loopback) {
       sdpMediaConstraints.mandatory.add(new MediaConstraints.KeyValuePair(
           "OfferToReceiveVideo", "true"));
     } else {
@@ -516,7 +517,6 @@ public class PeerConnectionClient {
     }
   }
 
-  @TODO(msg = "Create VideoCapturer")
   private void createPeerConnectionInternal(EglBase.Context renderEGLContext) {
     if (factory == null || isError) {
       Log.e(TAG, "Peerconnection factory is not created");
@@ -563,7 +563,7 @@ public class PeerConnectionClient {
             super.onStop();
           }
         };
-        videoCapturer = new ScreenCapturerAndroid(null, mediaProjectionCallback);
+        videoCapturer = new ScreenCapturerAndroid(context.getMediaProjectionResultData(), mediaProjectionCallback);
       }
       else {
         if (peerConnectionParameters.useCamera2) {

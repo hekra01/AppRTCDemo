@@ -18,9 +18,11 @@ import org.appspot.apprtc.util.LooperExecutor;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.FragmentTransaction;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -38,6 +40,7 @@ import org.webrtc.RendererCommon.ScalingType;
 import org.webrtc.SessionDescription;
 import org.webrtc.StatsReport;
 import org.webrtc.SurfaceViewRenderer;
+import org.webrtc.TODO;
 
 /**
  * Activity for peer connection call setup, call waiting
@@ -125,6 +128,10 @@ public class CallActivity extends Activity
   private static final int REMOTE_Y = 0;
   private static final int REMOTE_WIDTH = 100;
   private static final int REMOTE_HEIGHT = 100;
+  private static final int REQUEST_MEDIA_PROJECTION = 1;
+  private static final String STATE_RESULT_CODE = "result_code";
+  private static final String STATE_RESULT_DATA = "result_data";
+
   private PeerConnectionClient peerConnectionClient = null;
   private AppRTCClient appRtcClient;
   private SignalingParameters signalingParameters;
@@ -151,10 +158,17 @@ public class CallActivity extends Activity
   private CallFragment callFragment;
   private HudFragment hudFragment;
   private CpuMonitor cpuMonitor;
+  private Intent mResultData;
+  private int mResultCode;
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    if (savedInstanceState != null) {
+      mResultCode = savedInstanceState.getInt(STATE_RESULT_CODE);
+      mResultData = savedInstanceState.getParcelable(STATE_RESULT_DATA);
+    }
+
     Thread.setDefaultUncaughtExceptionHandler(
         new UnhandledExceptionHandler(this));
 
@@ -238,6 +252,11 @@ public class CallActivity extends Activity
     boolean useCamera2 = Camera2Enumerator.isSupported()
         && intent.getBooleanExtra(EXTRA_CAMERA2, true);
 
+    boolean captureDesktop = intent.getBooleanExtra(EXTRA_CAPTURE_DESKTOP, true);
+    if(captureDesktop) {
+      initMediaProjection();
+    }
+
     peerConnectionParameters = new PeerConnectionParameters(
         intent.getBooleanExtra(EXTRA_CAPTURE_DESKTOP, true),
         intent.getBooleanExtra(EXTRA_VIDEO_CALL, true),
@@ -307,6 +326,45 @@ public class CallActivity extends Activity
     }
     peerConnectionClient.createPeerConnectionFactory(
         CallActivity.this, peerConnectionParameters, CallActivity.this);
+  }
+
+  @Override
+  public void onSaveInstanceState(Bundle outState) {
+    super.onSaveInstanceState(outState);
+    if (mResultData != null) {
+      outState.putInt(STATE_RESULT_CODE, mResultCode);
+      outState.putParcelable(STATE_RESULT_DATA, mResultData);
+    }
+  }
+
+  @TODO(msg = "Later find better option for getting cb")
+  private void initMediaProjection() {
+    if (mResultData == null) {
+      MediaProjectionManager mp = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+      startActivityForResult(mp.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION);
+    }
+  }
+
+  public void onActivityResult(int requestCode, int resultCode, Intent data) {
+    if (requestCode == REQUEST_MEDIA_PROJECTION) {
+      if (resultCode != Activity.RESULT_OK) {
+        Log.i(TAG, "User cancelled");
+        return;
+      }
+      Log.i(TAG, "Starting screen capture");
+      mResultData = data;
+      mResultCode = resultCode;
+    }
+  }
+
+  public Intent getMediaProjectionResultData() {
+    initMediaProjection();
+    return mResultData;
+  }
+
+  public int getMediaProjectionResultCode() {
+    initMediaProjection();
+    return mResultCode;
   }
 
   // Activity interfaces
