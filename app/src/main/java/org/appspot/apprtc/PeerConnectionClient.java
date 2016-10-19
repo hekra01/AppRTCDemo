@@ -10,16 +10,12 @@
 
 package org.appspot.apprtc;
 
-import org.appspot.apprtc.AppRTCClient.SignalingParameters;
-
-import android.app.Activity;
-import android.content.Context;
-import android.content.Intent;
 import android.media.projection.MediaProjection;
 import android.os.Environment;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
+import org.appspot.apprtc.AppRTCClient.SignalingParameters;
 import org.webrtc.AudioSource;
 import org.webrtc.AudioTrack;
 import org.webrtc.Camera1Enumerator;
@@ -51,8 +47,8 @@ import org.webrtc.voiceengine.WebRtcAudioUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -1134,8 +1130,40 @@ public class PeerConnectionClient {
 
     @Override
     public void onDataChannel(final DataChannel dc) {
-      reportError("AppRTC doesn't use data channels, but got: " + dc.label()
-          + " anyway!");
+      dc.registerObserver(new DataChannel.Observer() {
+        public void onBufferedAmountChange(long var1){
+          Log.d(TAG,
+                  "Data channel buffered amount changed: " + dc.label() + ": " + dc.state());
+        }
+
+        @Override
+        public void onStateChange() {
+          Log.d(TAG,
+                  "Data channel state changed: " + dc.label() + ": " + dc.state());
+        }
+
+        @Override
+        @TODO (msg = "Extrack keycodes and dispatch")
+        public void onMessage(final DataChannel.Buffer buffer) {
+          if (buffer.binary) {
+            Log.d(TAG, "Received binary msg over " + dc);
+            return;
+          }
+          ByteBuffer data = buffer.data;
+          final byte[] bytes = new byte[ data.capacity() ];
+          data.get(bytes);
+          context.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+              if( !buffer.binary ) {
+                // Get DC message as String.
+                String strData = new String( bytes );
+                Log.d(TAG, "Got msg: " + strData + " over " + dc);
+              }
+            }
+          });
+        }
+      });
     }
 
     @Override
