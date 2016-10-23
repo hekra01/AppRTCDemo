@@ -102,6 +102,7 @@ public class PeerConnectionClient {
   private CallActivity context;
   private PeerConnectionFactory factory;
   private PeerConnection peerConnection;
+  private DataChannel dataChannel;
   PeerConnectionFactory.Options options = null;
   private AudioSource audioSource;
   private VideoSource videoSource;
@@ -141,7 +142,7 @@ public class PeerConnectionClient {
   private AudioTrack localAudioTrack;
   private boolean desktop;
 
-  /**
+    /**
    * Peer connection parameters.
    */
   public static class PeerConnectionParameters {
@@ -541,6 +542,9 @@ public class PeerConnectionClient {
 
     peerConnection = factory.createPeerConnection(
         rtcConfig, pcConstraints, pcObserver);
+    DataChannel.Init init = new DataChannel.Init();
+    init.ordered = true;
+    dataChannel = peerConnection.createDataChannel("docker android", init);
     isInitiator = false;
 
     // Set default WebRTC tracing and INFO libjingle logging.
@@ -610,6 +614,10 @@ public class PeerConnectionClient {
     }
     Log.d(TAG, "Closing peer connection.");
     statsTimer.cancel();
+    if (dataChannel != null) {
+      dataChannel.dispose();
+      dataChannel = null;
+    }
     if (peerConnection != null) {
       peerConnection.dispose();
       peerConnection = null;
@@ -1129,9 +1137,9 @@ public class PeerConnectionClient {
     }
 
     @Override
-    @TODO (msg = "Enable later")
     public void onDataChannel(final DataChannel dc) {
-      if(true) return; //Later
+      Log.d(TAG, "NEW Data channel " + dc.label());
+
       dc.registerObserver(new DataChannel.Observer() {
         public void onBufferedAmountChange(long var1){
           Log.d(TAG,
