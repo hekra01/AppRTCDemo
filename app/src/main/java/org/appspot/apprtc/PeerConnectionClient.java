@@ -1129,7 +1129,9 @@ public class PeerConnectionClient {
     }
 
     @Override
+    @TODO (msg = "Enable later")
     public void onDataChannel(final DataChannel dc) {
+      if(true) return; //Later
       dc.registerObserver(new DataChannel.Observer() {
         public void onBufferedAmountChange(long var1){
           Log.d(TAG,

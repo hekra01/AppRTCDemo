@@ -248,7 +248,7 @@ public class ScreenCapturerAndroid
     // This is called on the internal looper thread of {@Code SurfaceTextureHelper}.
     @Override
     public void onTextureFrameAvailable(int oesTextureId, float[] transformMatrix, long timestampNs) {
-        Log.d(TAG, "onTextureFrameAvailable " + numCapturedFrames);
+        //Log.d(TAG, "onTextureFrameAvailable " + numCapturedFrames);
         numCapturedFrames++;
         capturerObserver.onTextureFrameCaptured(
                 width, height, oesTextureId, transformMatrix, 0 /* rotation */, timestampNs);
