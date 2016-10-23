@@ -16,6 +16,7 @@ import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
 import org.appspot.apprtc.AppRTCClient.SignalingParameters;
+import org.appspot.apprtc.util.UInput;
 import org.webrtc.AudioSource;
 import org.webrtc.AudioTrack;
 import org.webrtc.Camera1Enumerator;
@@ -1153,7 +1154,6 @@ public class PeerConnectionClient {
         }
 
         @Override
-        @TODO (msg = "Extrack keycodes and dispatch")
         public void onMessage(final DataChannel.Buffer buffer) {
           if (buffer.binary) {
             Log.d(TAG, "Received binary msg over " + dc);
@@ -1162,15 +1162,18 @@ public class PeerConnectionClient {
           ByteBuffer data = buffer.data;
           final byte[] bytes = new byte[ data.capacity() ];
           data.get(bytes);
-          context.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-              if( !buffer.binary ) {
-                // Get DC message as String.
-                String strData = new String( bytes );
-                Log.d(TAG, "Got msg: " + strData + " over " + dc);
+          executor.execute(new Runnable() {
+              @Override
+              public void run() {
+                  // Get DC message as String.
+                  String strData = new String( bytes );
+                  Log.d(TAG, "Got msg: " + strData + " over " + dc);
+                  try {
+                      UInput.getInstance().writecmd(strData);
+                  } catch (IOException e) {
+                      throw new Error(e);
+                  }
               }
-            }
           });
         }
       });
