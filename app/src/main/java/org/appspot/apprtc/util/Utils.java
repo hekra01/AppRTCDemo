@@ -33,6 +33,7 @@ public class Utils {
 
     private static final String TAG = Utils.class.getName();
     private static final boolean DBG = true;
+    public static final boolean DEMO = true;
 
     public static boolean mkFifo(String path) {
         try {

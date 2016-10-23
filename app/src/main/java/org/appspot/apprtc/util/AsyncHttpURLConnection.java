@@ -29,6 +29,7 @@ public class AsyncHttpURLConnection {
   private final String message;
   private final AsyncHttpEvents events;
   private String contentType;
+  private final String origin;
 
   /**
    * Http requests callbacks.
@@ -39,11 +40,17 @@ public class AsyncHttpURLConnection {
   }
 
   public AsyncHttpURLConnection(String method, String url, String message,
+                                AsyncHttpEvents events) {
+    this(method, url, message, HTTP_ORIGIN, events);
+  }
+
+  public AsyncHttpURLConnection(String method, String url, String message, String origin,
       AsyncHttpEvents events) {
     this.method = method;
     this.url = url;
     this.message = message;
     this.events = events;
+    this.origin = origin;
   }
 
   public void setContentType(String contentType) {
@@ -73,7 +80,7 @@ public class AsyncHttpURLConnection {
       connection.setConnectTimeout(HTTP_TIMEOUT_MS);
       connection.setReadTimeout(HTTP_TIMEOUT_MS);
       // TODO(glaznev) - query request origin from pref_room_server_url_key preferences.
-      connection.addRequestProperty("origin", HTTP_ORIGIN);
+      connection.addRequestProperty("origin", origin);
       boolean doOutput = false;
       if (method.equals("POST")) {
         doOutput = true;

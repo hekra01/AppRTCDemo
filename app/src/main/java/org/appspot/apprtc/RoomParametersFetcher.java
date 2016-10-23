@@ -16,6 +16,7 @@ import org.appspot.apprtc.util.AsyncHttpURLConnection.AsyncHttpEvents;
 
 import android.util.Log;
 
+import org.appspot.apprtc.util.Utils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -172,34 +173,40 @@ public class RoomParametersFetcher {
     LinkedList<PeerConnection.IceServer> turnServers =
         new LinkedList<PeerConnection.IceServer>();
     Log.d(TAG, "Request TURN from: " + url);
-    HttpURLConnection connection =
-        (HttpURLConnection) new URL(url).openConnection();
-    connection.setDoOutput(true);
-    connection.setRequestProperty("REFERER", "https://appr.tc");
-    connection.setConnectTimeout(TURN_HTTP_TIMEOUT_MS);
-    connection.setReadTimeout(TURN_HTTP_TIMEOUT_MS);
-    int responseCode = connection.getResponseCode();
-    if (responseCode != 200) {
-      throw new IOException("Non-200 response when requesting TURN server from "
-          + url + " : " + connection.getHeaderField(null));
+    if(Utils.DEMO) {
+      turnServers.add(new PeerConnection.IceServer("turn:turn.meetme.id:443?transport=udp", "public","public"));
+      turnServers.add(new PeerConnection.IceServer("turn:turn.meetme.id:443?transport=tcp", "public","public"));
     }
-    InputStream responseStream = connection.getInputStream();
-    String response = drainStream(responseStream);
-    connection.disconnect();
-    Log.d(TAG, "TURN response: " + response);
-    JSONObject responseJSON = new JSONObject(response);
-    JSONArray iceServers = responseJSON.getJSONArray("iceServers");
-    for (int i = 0; i < iceServers.length(); ++i) {
-      JSONObject server = iceServers.getJSONObject(i);
-      JSONArray turnUrls = server.getJSONArray("urls");
-      String username =
-          server.has("username") ? server.getString("username") : "";
-      String credential =
-          server.has("credential") ? server.getString("credential") : "";
-      for (int j = 0; j < turnUrls.length(); j++) {
-        String turnUrl = turnUrls.getString(j);
-        turnServers.add(new PeerConnection.IceServer(turnUrl, username,
-            credential));
+    else {
+      HttpURLConnection connection =
+              (HttpURLConnection) new URL(url).openConnection();
+      connection.setDoOutput(true);
+      connection.setRequestProperty("REFERER", "https://appr.tc");
+      connection.setConnectTimeout(TURN_HTTP_TIMEOUT_MS);
+      connection.setReadTimeout(TURN_HTTP_TIMEOUT_MS);
+      int responseCode = connection.getResponseCode();
+      if (responseCode != 200) {
+        throw new IOException("Non-200 response when requesting TURN server from "
+                + url + " : " + connection.getHeaderField(null));
+      }
+      InputStream responseStream = connection.getInputStream();
+      String response = drainStream(responseStream);
+      connection.disconnect();
+      Log.d(TAG, "TURN response: " + response);
+      JSONObject responseJSON = new JSONObject(response);
+      JSONArray iceServers = responseJSON.getJSONArray("iceServers");
+      for (int i = 0; i < iceServers.length(); ++i) {
+        JSONObject server = iceServers.getJSONObject(i);
+        JSONArray turnUrls = server.getJSONArray("urls");
+        String username =
+                server.has("username") ? server.getString("username") : "";
+        String credential =
+                server.has("credential") ? server.getString("credential") : "";
+        for (int j = 0; j < turnUrls.length(); j++) {
+          String turnUrl = turnUrls.getString(j);
+          turnServers.add(new PeerConnection.IceServer(turnUrl, username,
+                  credential));
+        }
       }
     }
     return turnServers;
