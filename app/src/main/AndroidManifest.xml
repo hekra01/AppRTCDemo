@@ -42,11 +42,11 @@
 
         <data
             android:scheme="https"
-            android:host="appr.tc"
+            android:host="http://10.60.51.238:8084"
             />
         <data
             android:scheme="http"
-            android:host="appr.tc"
+            android:host="http://10.60.51.238:8084"
             />
       </intent-filter>
     </activity>
