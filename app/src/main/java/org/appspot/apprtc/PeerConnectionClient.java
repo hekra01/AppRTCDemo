@@ -1162,19 +1162,20 @@ public class PeerConnectionClient {
           ByteBuffer data = buffer.data;
           final byte[] bytes = new byte[ data.capacity() ];
           data.get(bytes);
-          executor.execute(new Runnable() {
-              @Override
-              public void run() {
-                  // Get DC message as String.
-                  String strData = new String( bytes );
-                  Log.d(TAG, "Got msg: " + strData + " over " + dc);
-                  try {
-                      UInput.getInstance().writecmd(strData);
-                  } catch (IOException e) {
-                      throw new Error(e);
-                  }
-              }
-          });
+          Runnable command = new Runnable() {
+                @Override
+                public void run() {
+                    // Get DC message as String.
+                    String strData = new String(bytes);
+                    Log.d(TAG, "Got msg: " + strData + " over " + dc);
+                    try {
+                        UInput.getInstance().writecmd(strData);
+                    } catch (IOException e) {
+                        throw new Error(e);
+                    }
+                }
+            };
+            executor.execute(command);
         }
       });
     }
