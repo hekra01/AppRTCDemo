@@ -41,7 +41,7 @@
 
     <string name="pref_camera2_key">camera2_preference</string>
     <string name="pref_camera2_title">Use Camera2.</string>
-    <string name="pref_camera2_default">true</string>
+    <string name="pref_camera2_default">false</string>
     <string name="pref_camera2_not_supported">Only supported on Android Lollipop and forward.</string>
 
     <string name="pref_resolution_key">resolution_preference</string>
@@ -153,7 +153,7 @@
     <string name="pref_room_server_url_key">room_server_url_preference</string>
     <string name="pref_room_server_url_title">Room server URL.</string>
     <string name="pref_room_server_url_dlg">Enter a room server URL.</string>
-    <string name="pref_room_server_url_default" translatable="false">https://appr.tc</string>
+    <string name="pref_room_server_url_default" translatable="false">http://10.60.51.238:8084</string>
 
     <string name="pref_displayhud_key">displayhud_preference</string>
     <string name="pref_displayhud_title">Display call statistics.</string>

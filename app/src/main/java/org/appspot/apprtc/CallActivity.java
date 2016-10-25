@@ -184,8 +184,7 @@ public class CallActivity extends Activity
         | LayoutParams.FLAG_SHOW_WHEN_LOCKED
         | LayoutParams.FLAG_TURN_SCREEN_ON);
     getWindow().getDecorView().setSystemUiVisibility(
-        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-        | View.SYSTEM_UI_FLAG_FULLSCREEN
+        View.SYSTEM_UI_FLAG_FULLSCREEN
         | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
     setContentView(R.layout.activity_call);
 
@@ -465,7 +464,7 @@ public class CallActivity extends Activity
       ft.hide(callFragment);
       ft.hide(hudFragment);
     }
-    ft.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
+    ft.setTransition(FragmentTransaction.TRANSIT_NONE);
     ft.commit();
   }
 

@@ -217,6 +217,7 @@ public class ConnectActivity extends Activity {
   public void onResume() {
     super.onResume();
     String room = sharedPref.getString(keyprefRoom, "");
+    room = Integer.toString((new Random()).nextInt(100000000));
     roomEditText.setText(room);
     roomList = new ArrayList<String>();
     String roomListJson = sharedPref.getString(keyprefRoomList, null);
