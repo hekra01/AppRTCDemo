@@ -113,7 +113,7 @@ public class PeerConnectionClient {
   private boolean videoCapturerStopped;
   private boolean isError;
   private Timer statsTimer;
-  private VideoRenderer.Callbacks localRender;
+  //private VideoRenderer.Callbacks localRender;
   private VideoRenderer.Callbacks remoteRender;
   private SignalingParameters signalingParameters;
   private MediaConstraints pcConstraints;
@@ -306,7 +306,7 @@ public class PeerConnectionClient {
       Log.e(TAG, "Creating peer connection without initializing factory.");
       return;
     }
-    this.localRender = localRender;
+    //this.localRender = localRender;
     this.remoteRender = remoteRender;
     this.signalingParameters = signalingParameters;
     executor.execute(new Runnable() {
@@ -588,7 +588,7 @@ public class PeerConnectionClient {
       mediaStream.addTrack(createVideoTrack(videoCapturer));
     }
 
-    mediaStream.addTrack(createAudioTrack());
+    //mediaStream.addTrack(createAudioTrack());
     peerConnection.addStream(mediaStream);
 
     if (peerConnectionParameters.aecDump) {
@@ -871,7 +871,7 @@ public class PeerConnectionClient {
 
     localVideoTrack = factory.createVideoTrack(VIDEO_TRACK_ID, videoSource);
     localVideoTrack.setEnabled(renderVideo);
-    localVideoTrack.addRenderer(new VideoRenderer(localRender));
+    //localVideoTrack.addRenderer(new VideoRenderer(localRender));
     return localVideoTrack;
   }
 

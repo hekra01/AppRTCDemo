@@ -138,9 +138,9 @@ public class CallActivity extends Activity
   private SignalingParameters signalingParameters;
   private AppRTCAudioManager audioManager = null;
   private EglBase rootEglBase;
-  private SurfaceViewRenderer localRender;
+  //private SurfaceViewRenderer localRender;
   private SurfaceViewRenderer remoteRender;
-  private PercentFrameLayout localRenderLayout;
+  //private PercentFrameLayout localRenderLayout;
   private PercentFrameLayout remoteRenderLayout;
   private ScalingType scalingType;
   private Toast logToast;
@@ -193,9 +193,9 @@ public class CallActivity extends Activity
     scalingType = ScalingType.SCALE_ASPECT_FILL;
 
     // Create UI controls.
-    localRender = (SurfaceViewRenderer) findViewById(R.id.local_video_view);
+    //localRender = (SurfaceViewRenderer) findViewById(R.id.local_video_view);
     remoteRender = (SurfaceViewRenderer) findViewById(R.id.remote_video_view);
-    localRenderLayout = (PercentFrameLayout) findViewById(R.id.local_video_layout);
+    //localRenderLayout = (PercentFrameLayout) findViewById(R.id.local_video_layout);
     remoteRenderLayout = (PercentFrameLayout) findViewById(R.id.remote_video_layout);
     callFragment = new CallFragment();
     hudFragment = new HudFragment();
@@ -208,17 +208,18 @@ public class CallActivity extends Activity
       }
     };
 
-    localRender.setOnClickListener(listener);
+    //localRender.setOnClickListener(listener);
     remoteRender.setOnClickListener(listener);
 
     // Create video renderers.
     rootEglBase = EglBase.create();
-    localRender.init(rootEglBase.getEglBaseContext(), null);
+    //localRender.init(rootEglBase.getEglBaseContext(), null);
     remoteRender.init(rootEglBase.getEglBaseContext(), null);
-    localRender.setZOrderMediaOverlay(true);
+    //localRender.setZOrderMediaOverlay(true);
     updateVideoView();
 
     // Check for mandatory permissions.
+    /*
     for (String permission : MANDATORY_PERMISSIONS) {
       if (checkCallingOrSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
         logAndToast("Permission " + permission + " is not granted");
@@ -226,7 +227,7 @@ public class CallActivity extends Activity
         finish();
         return;
       }
-    }
+    }*/
 
     // Get Intent parameters.
     final Intent intent = getIntent();
@@ -474,17 +475,17 @@ public class CallActivity extends Activity
     remoteRender.setMirror(false);
 
     if (iceConnected) {
-      localRenderLayout.setPosition(
-          LOCAL_X_CONNECTED, LOCAL_Y_CONNECTED, LOCAL_WIDTH_CONNECTED, LOCAL_HEIGHT_CONNECTED);
-      localRender.setScalingType(ScalingType.SCALE_ASPECT_FIT);
+      //localRenderLayout.setPosition(
+      //    LOCAL_X_CONNECTED, LOCAL_Y_CONNECTED, LOCAL_WIDTH_CONNECTED, LOCAL_HEIGHT_CONNECTED);
+      //localRender.setScalingType(ScalingType.SCALE_ASPECT_FIT);
     } else {
-      localRenderLayout.setPosition(
-          LOCAL_X_CONNECTING, LOCAL_Y_CONNECTING, LOCAL_WIDTH_CONNECTING, LOCAL_HEIGHT_CONNECTING);
-      localRender.setScalingType(scalingType);
+      //localRenderLayout.setPosition(
+      //    LOCAL_X_CONNECTING, LOCAL_Y_CONNECTING, LOCAL_WIDTH_CONNECTING, LOCAL_HEIGHT_CONNECTING);
+      //localRender.setScalingType(scalingType);
     }
-    localRender.setMirror(true);
+    //localRender.setMirror(true);
 
-    localRender.requestLayout();
+    //localRender.requestLayout();
     remoteRender.requestLayout();
   }
 
@@ -547,10 +548,10 @@ public class CallActivity extends Activity
       peerConnectionClient.close();
       peerConnectionClient = null;
     }
-    if (localRender != null) {
+    /*if (localRender != null) {
       localRender.release();
       localRender = null;
-    }
+    }*/
     if (remoteRender != null) {
       remoteRender.release();
       remoteRender = null;
@@ -617,7 +618,7 @@ public class CallActivity extends Activity
     signalingParameters = params;
     logAndToast("Creating peer connection, delay=" + delta + "ms");
     peerConnectionClient.createPeerConnection(rootEglBase.getEglBaseContext(),
-        localRender, remoteRender, signalingParameters);
+        null, remoteRender, signalingParameters);
 
     if (signalingParameters.initiator) {
       logAndToast("Creating OFFER...");

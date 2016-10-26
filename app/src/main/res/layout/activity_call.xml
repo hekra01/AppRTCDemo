@@ -14,7 +14,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
     </org.appspot.apprtc.PercentFrameLayout>
-
+<!--
     <org.appspot.apprtc.PercentFrameLayout
         android:id="@+id/local_video_layout"
         android:layout_width="match_parent"
@@ -24,7 +24,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
     </org.appspot.apprtc.PercentFrameLayout>
-
+-->
     <FrameLayout
         android:id="@+id/call_fragment_container"
         android:layout_width="match_parent"
