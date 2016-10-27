@@ -41,4 +41,5 @@ android {
 dependencies {
   compile files('libs/autobanh.jar')
   compile files('libs/libjingle_peerconnection.jar')
+  compile files('libs/base.jar')
 }
