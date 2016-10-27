@@ -3,3 +3,14 @@
 Android Studio project for AppRTCDemo of WebRTC project. The revision number of this build is 13665.
 * official: https://chromium.googlesource.com/external/webrtc/+/968c9ccfe80f6f0d64991d5e997ce74774381dfa
 * or https://github.com/hekra01/webrtc/tree/rev13665
+
+For Facets:
+1-run docker instances as in the launch.sh script
+2-run the roomserver at https://github.com/hekra01/apprtc. 
+3-modify android settings to grant the app permissions:
+  * "android.permission.MODIFY_AUDIO_SETTINGS",
+  * "android.permission.RECORD_AUDIO",
+  * "android.permission.INTERNET"
+4-When the app is launched, adjust its settings if needed (room server url, default codec, etc...)
+
+

@@ -489,6 +489,8 @@ public class CallActivity extends Activity
   }
 
   private void startCall() {
+    Object a = this;
+    Log.e(TAG, "############################################# START " + this +" callStartedTimeMs "+callStartedTimeMs);
     if (appRtcClient == null) {
       Log.e(TAG, "AppRTC client is not allocated for a call.");
       return;
