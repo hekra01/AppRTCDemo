@@ -2,7 +2,7 @@
 set -x
 if [ $# -ne 1 ]
   then
-    #echo "Provide docker instance number only" && exit 1
+    #By default run instance 2
     INSTANCE=2
 else
     INSTANCE=$1
@@ -17,13 +17,18 @@ start-android-marsh-generic.sh $INSTANCE &
 
 sleep 15
 
+# Install needed apks
 run-adb.sh $INSTANCE install Facets-release.apk
 run-adb.sh $INSTANCE install sf.apk
 run-adb.sh $INSTANCE install apprtc-debug.apk
 run-adb.sh $INSTANCE shell ./PrepareSdcard.sh
+
+# Generate an id for this instance. 
+# It will be used to created a fixed room number by the AppRTCDemo application, otherwise the room id will be random
 IP=$(ifconfig enp3s0 | grep addr: | awk '{ print ip=$2 }' | cut -d: -f2)
 run-adb.sh $INSTANCE shell "echo $IP'-instance-'$INSTANCE > /private/sf/id.txt"
-run-adb.sh $INSTANCE shell 'cat /private/sf/id.txt'
+
+# Grant permissions needed by AppRTCDemo
 run-adb.sh $INSTANCE shell 'pm grant org.appspot.apprtc android.permission.RECORD_AUDIO'
 run-adb.sh $INSTANCE shell 'pm grant org.appspot.apprtc android.permission.MODIFY_AUDIO_SETTINGS'
 
