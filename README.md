@@ -5,7 +5,7 @@ Android Studio project for AppRTCDemo of WebRTC project. The revision number of 
 * or https://github.com/hekra01/webrtc/tree/rev13722
 
 For Facets:
-1-run docker instances as in the launch.sh script
+1-See/reuse the launch.sh script to configure and launch the docker instance that will host the AppRTCDemo app for Facets
 2-run the roomserver at https://github.com/hekra01/apprtc. 
 3-modify android settings to grant the app permissions:
   * "android.permission.MODIFY_AUDIO_SETTINGS",
