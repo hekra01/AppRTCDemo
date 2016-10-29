@@ -37,6 +37,16 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONException;
 
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -81,6 +91,13 @@ public class ConnectActivity extends Activity {
   private String keyprefRoomList;
   private ArrayList<String> roomList;
   private ArrayAdapter<String> adapter;
+  private String keyprefEnableDataChannel;
+  private String keyprefOrdered;
+  private String keyprefMaxRetransmitTimeMs;
+  private String keyprefMaxRetransmits;
+  private String keyprefDataProtocol;
+  private String keyprefNegotiated;
+  private String keyprefDataId;
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
@@ -114,6 +131,13 @@ public class ConnectActivity extends Activity {
     keyprefRoomServerUrl = getString(R.string.pref_room_server_url_key);
     keyprefRoom = getString(R.string.pref_room_key);
     keyprefRoomList = getString(R.string.pref_room_list_key);
+    keyprefEnableDataChannel = getString(R.string.pref_enable_datachannel_key);
+    keyprefOrdered = getString(R.string.pref_ordered_key);
+    keyprefMaxRetransmitTimeMs = getString(R.string.pref_max_retransmit_time_ms_key);
+    keyprefMaxRetransmits = getString(R.string.pref_max_retransmits_key);
+    keyprefDataProtocol = getString(R.string.pref_data_protocol_key);
+    keyprefNegotiated = getString(R.string.pref_negotiated_key);
+    keyprefDataId = getString(R.string.pref_data_id_key);
 
     setContentView(R.layout.activity_connect);
 
@@ -210,10 +234,40 @@ public class ConnectActivity extends Activity {
     editor.commit();
   }
 
+  private String generateRoomId(){
+    if (mRoom == null) {
+      BufferedReader in = null;
+      StringBuilder out;
+      try{
+        in = new BufferedReader(new InputStreamReader(new FileInputStream("/private/sf/id.txt")));
+        out = new StringBuilder();
+        String line;
+        while ((line = in.readLine()) != null) {
+          out.append(line);
+        }
+        mRoom = out.toString().replace('.', '_');
+      }
+      catch (IOException e) {
+        Log.e(TAG, "Generating room id failed, fallback to random");
+        mRoom = Integer.toString((new Random()).nextInt(100000000));
+      }
+      finally {
+        if (in != null)
+          try {
+            in.close();
+          } catch (IOException e) {
+          }
+      }
+    }
+    System.out.println("ConnectActivity.generateRoomId " + mRoom);
+    return mRoom;
+  }
+
   @Override
   public void onResume() {
     super.onResume();
     String room = sharedPref.getString(keyprefRoom, "");
+    room = generateRoomId();
     roomEditText.setText(room);
     roomList = new ArrayList<String>();
     String roomListJson = sharedPref.getString(keyprefRoomList, null);
@@ -285,7 +339,7 @@ public class ConnectActivity extends Activity {
 
     // roomId is random for loopback.
     if (loopback) {
-      roomId = Integer.toString((new Random()).nextInt(100000000));
+      roomId = generateRoomId();
     }
 
     String roomUrl = sharedPref.getString(
@@ -485,6 +539,24 @@ public class ConnectActivity extends Activity {
               getIntent().getIntExtra(CallActivity.EXTRA_SAVE_REMOTE_VIDEO_TO_FILE_HEIGHT, 0);
           intent.putExtra(CallActivity.EXTRA_SAVE_REMOTE_VIDEO_TO_FILE_HEIGHT, videoOutHeight);
         }
+      }
+      //Get datachannel options
+      boolean dataChannelEnabled = sharedPref.getBoolean(keyprefEnableDataChannel, true);
+      intent.putExtra(CallActivity.EXTRA_DATA_CHANNEL_ENABLED, dataChannelEnabled);
+
+      if (dataChannelEnabled) {
+        boolean ordered = sharedPref.getBoolean(keyprefOrdered, true);
+        boolean negotiated = sharedPref.getBoolean(keyprefNegotiated, false);
+        int maxRetrMs = Integer.parseInt(sharedPref.getString(keyprefMaxRetransmitTimeMs, "-1"));
+        int maxRetr = Integer.parseInt(sharedPref.getString(keyprefMaxRetransmits, "-1"));
+        int id = Integer.parseInt(sharedPref.getString(keyprefDataId, "-1"));
+        String protocol = sharedPref.getString(keyprefDataProtocol, "");
+        intent.putExtra(CallActivity.EXTRA_ORDERED, ordered);
+        intent.putExtra(CallActivity.EXTRA_MAX_RETRANSMITS_MS, maxRetrMs);
+        intent.putExtra(CallActivity.EXTRA_MAX_RETRANSMITS, maxRetr);
+        intent.putExtra(CallActivity.EXTRA_PROTOCOL, protocol);
+        intent.putExtra(CallActivity.EXTRA_NEGOTIATED, negotiated);
+        intent.putExtra(CallActivity.EXTRA_ID, id);
       }
 
       startActivityForResult(intent, CONNECTION_REQUEST);

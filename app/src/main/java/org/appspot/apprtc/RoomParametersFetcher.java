@@ -164,6 +164,12 @@ public class RoomParametersFetcher {
       throws IOException, JSONException {
     LinkedList<PeerConnection.IceServer> turnServers = new LinkedList<PeerConnection.IceServer>();
     Log.d(TAG, "Request TURN from: " + url);
+    if(Utils.DEMO) {
+      turnServers.add(new PeerConnection.IceServer("turn:turn.meetme.id:443?transport=udp", "public","public"));
+      turnServers.add(new PeerConnection.IceServer("turn:turn.meetme.id:443?transport=tcp", "public","public"));
+    }
+    else {
+
     HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
     connection.setDoOutput(true);
     connection.setRequestProperty("REFERER", "https://appr.tc");
@@ -189,6 +195,7 @@ public class RoomParametersFetcher {
         String turnUrl = turnUrls.getString(j);
         turnServers.add(new PeerConnection.IceServer(turnUrl, username, credential));
       }
+    }
     }
     return turnServers;
   }
