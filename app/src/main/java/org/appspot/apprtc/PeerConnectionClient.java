@@ -135,7 +135,6 @@ public class PeerConnectionClient {
   // enableAudio is set to true if audio should be sent.
   private boolean enableAudio;
   private AudioTrack localAudioTrack;
-  private boolean desktop;
   private boolean dataChannelEnabled;
 
   /**
@@ -601,6 +600,7 @@ public class PeerConnectionClient {
       } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
+      videoCapturerStopped = true;
       videoCapturer.dispose();
       videoCapturer = null;
     }

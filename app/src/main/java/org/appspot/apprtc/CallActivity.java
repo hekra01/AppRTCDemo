@@ -26,6 +26,7 @@ import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
@@ -176,9 +177,15 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    if (savedInstanceState != null) {
-      mResultCode = savedInstanceState.getInt(STATE_RESULT_CODE);
-      mResultData = savedInstanceState.getParcelable(STATE_RESULT_DATA);
+
+    if (captureDesktop()) {
+      if (savedInstanceState != null) {
+        mResultCode = savedInstanceState.getInt(STATE_RESULT_CODE);
+        mResultData = savedInstanceState.getParcelable(STATE_RESULT_DATA);
+      }
+      if (mResultData == null){
+        initMediaProjection();
+      }
     }
 
     Thread.setDefaultUncaughtExceptionHandler(new UnhandledExceptionHandler(this));
@@ -274,10 +281,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
 
     boolean loopback = intent.getBooleanExtra(EXTRA_LOOPBACK, false);
     boolean tracing = intent.getBooleanExtra(EXTRA_TRACING, false);
-    boolean captureDesktop = captureDesktop();
-    if(captureDesktop) {
-      initMediaProjection();
-    }
+
     DataChannelParameters dataChannelParameters = null;
     if (intent.getBooleanExtra(EXTRA_DATA_CHANNEL_ENABLED, true)) {
       dataChannelParameters = new DataChannelParameters(
@@ -359,8 +363,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
   }
 
   private boolean useCamera2() {
-    return false;
-    //return Camera2Enumerator.isSupported(this) && getIntent().getBooleanExtra(EXTRA_CAMERA2, false);
+    return Camera2Enumerator.isSupported(this) && getIntent().getBooleanExtra(EXTRA_CAMERA2, true);
   }
   @Override
   public void onSaveInstanceState(Bundle outState) {
@@ -372,25 +375,16 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
   }
 
   private void initMediaProjection() {
-    Log.i(TAG, "initMediaProjection mResultData = " + mResultData);
+    dump("initMediaProjection");
+    Log.i(TAG, "initMediaProjection mResultData = " + mResultData+" "+Thread.currentThread() + " time " +(System.currentTimeMillis()%10000));
     if (mResultData == null) {
       MediaProjectionManager mp = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
       startActivityForResult(mp.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION);
     }
   }
 
-  private void waitForProj(){
-    synchronized (lock) {
-      while (mResultData == null)
-        try {
-          lock.wait(500);
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-    }
-  }
-
   public void onActivityResult(int requestCode, int resultCode, Intent data) {
+    dump("onActivityResult");
     Log.i(TAG, "onActivityResult requestCode = " + requestCode + " resultCode " + resultCode + " data " + data);
     if (requestCode == REQUEST_MEDIA_PROJECTION) {
       if (resultCode != Activity.RESULT_OK) {
@@ -398,19 +392,12 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
         return;
       }
       Log.i(TAG, "Starting screen capture");
-      mResultData = data;
-      mResultCode = resultCode;
+      synchronized (lock){
+        mResultData = data;
+        mResultCode = resultCode;
+        lock.notifyAll();
+      }
     }
-  }
-
-  public Intent getMediaProjectionResultData() {
-    waitForProj();
-    return mResultData;
-  }
-
-  public int getMediaProjectionResultCode() {
-    waitForProj();
-    return mResultCode;
   }
 
   private boolean captureToTexture() {
@@ -604,26 +591,36 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
   // Disconnect from remote resources, dispose of local resources, and exit.
   private void disconnect() {
     activityRunning = false;
+    boolean firstTime = appRtcClient != null;
+
+    if(!firstTime)
+      return;
+
     if (appRtcClient != null) {
       appRtcClient.disconnectFromRoom();
       appRtcClient = null;
     }
+
     if (peerConnectionClient != null) {
       peerConnectionClient.close();
       peerConnectionClient = null;
     }
+
     if (localRender != null) {
       localRender.release();
       localRender = null;
     }
+
     if (videoFileRenderer != null) {
       videoFileRenderer.release();
       videoFileRenderer = null;
     }
+
     if (remoteRenderScreen != null) {
       remoteRenderScreen.release();
       remoteRenderScreen = null;
     }
+
     if (audioManager != null) {
       audioManager.close();
       audioManager = null;
@@ -680,9 +677,18 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
     });
   }
 
+  private void dump(String s) {
+    if (false) {
+      Thread.dumpStack();
+      Thread t = Thread.currentThread();
+      System.out.println(s + " thread " + t + " id " + System.identityHashCode(t) + " " + System.currentTimeMillis() % 100000);
+    }
+  }
   private VideoCapturer createVideoCapturer() {
+    dump("createVideoCapturer");
     VideoCapturer videoCapturer = null;
     String videoFileAsCamera = getIntent().getStringExtra(EXTRA_VIDEO_FILE_AS_CAMERA);
+
     if (videoFileAsCamera != null) {
       try {
         videoCapturer = new FileVideoCapturer(videoFileAsCamera);
@@ -706,7 +712,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
             super.onStop();
           }
         };
-        videoCapturer = new ScreenCapturerAndroid(getMediaProjectionResultData(), mediaProjectionCallback);
+        videoCapturer = new ScreenCapturerAndroid(mResultData, mediaProjectionCallback);
       }
       else {
         Logging.d(TAG, "Creating capturer using camera1 API.");
@@ -760,12 +766,31 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
 
   @Override
   public void onConnectedToRoom(final SignalingParameters params) {
+    dump("onConnectedToRoom");
+    // no on ui thread, wait here for mediaproj completion
+    waitForProj();
     runOnUiThread(new Runnable() {
       @Override
       public void run() {
         onConnectedToRoomInternal(params);
       }
     });
+  }
+
+  private void waitForProj(){
+    boolean onUIThread = Looper.myLooper() == Looper.getMainLooper();
+    if (onUIThread)
+      throw new Error("Not to be called on UI Thread");
+
+    synchronized (lock) {
+      while (mResultData == null)
+        try {
+          System.out.println("CallActivity.waitForProj");
+          lock.wait(1000);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+    }
   }
 
   @Override
