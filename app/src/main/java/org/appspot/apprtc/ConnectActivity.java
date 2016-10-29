@@ -38,15 +38,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -98,6 +92,7 @@ public class ConnectActivity extends Activity {
   private String keyprefDataProtocol;
   private String keyprefNegotiated;
   private String keyprefDataId;
+  private String roomId;
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
@@ -234,8 +229,8 @@ public class ConnectActivity extends Activity {
     editor.commit();
   }
 
-  private String generateRoomId(){
-    if (mRoom == null) {
+  private String getRoomId(){
+    if (roomId == null) {
       BufferedReader in = null;
       StringBuilder out;
       try{
@@ -245,11 +240,11 @@ public class ConnectActivity extends Activity {
         while ((line = in.readLine()) != null) {
           out.append(line);
         }
-        mRoom = out.toString().replace('.', '_');
+        roomId = out.toString().replace('.', '_');
       }
       catch (IOException e) {
         Log.e(TAG, "Generating room id failed, fallback to random");
-        mRoom = Integer.toString((new Random()).nextInt(100000000));
+        roomId = Integer.toString((new Random()).nextInt(100000000));
       }
       finally {
         if (in != null)
@@ -259,15 +254,15 @@ public class ConnectActivity extends Activity {
           }
       }
     }
-    System.out.println("ConnectActivity.generateRoomId " + mRoom);
-    return mRoom;
+    System.out.println("ConnectActivity.getRoomId " + roomId);
+    return roomId;
   }
 
   @Override
   public void onResume() {
     super.onResume();
     String room = sharedPref.getString(keyprefRoom, "");
-    room = generateRoomId();
+    room = getRoomId();
     roomEditText.setText(room);
     roomList = new ArrayList<String>();
     String roomListJson = sharedPref.getString(keyprefRoomList, null);
@@ -339,7 +334,7 @@ public class ConnectActivity extends Activity {
 
     // roomId is random for loopback.
     if (loopback) {
-      roomId = generateRoomId();
+      roomId = getRoomId();
     }
 
     String roomUrl = sharedPref.getString(

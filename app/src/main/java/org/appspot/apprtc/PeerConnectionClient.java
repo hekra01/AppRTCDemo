@@ -17,6 +17,7 @@ import android.os.Environment;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
+import org.appspot.apprtc.util.UInput;
 import org.webrtc.AudioSource;
 import org.webrtc.AudioTrack;
 import org.webrtc.CameraVideoCapturer;
@@ -44,6 +45,7 @@ import org.webrtc.voiceengine.WebRtcAudioUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.LinkedList;
@@ -134,7 +136,6 @@ public class PeerConnectionClient {
   private boolean enableAudio;
   private AudioTrack localAudioTrack;
   private boolean desktop;
-  private DataChannel dataChannel;
   private boolean dataChannelEnabled;
 
   /**
@@ -182,7 +183,6 @@ public class PeerConnectionClient {
     public final boolean disableBuiltInAGC;
     public final boolean disableBuiltInNS;
     public final boolean enableLevelControl;
-    private final boolean desktop;
     private final DataChannelParameters dataChannelParameters;
 
     public PeerConnectionParameters(boolean videoCallEnabled, boolean loopback, boolean tracing,
@@ -303,7 +303,13 @@ public class PeerConnectionClient {
     executor.execute(new Runnable() {
       @Override
       public void run() {
-        createPeerConnectionFactoryInternal(context);
+        try {
+          createPeerConnectionFactoryInternal(context);
+        }
+        catch (Throwable e) {
+          e.printStackTrace();
+          throw new Error(e);
+        }
       }
     });
   }

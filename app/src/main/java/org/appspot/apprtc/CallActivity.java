@@ -21,6 +21,8 @@ import android.app.FragmentTransaction;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.projection.MediaProjection;
+import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -40,6 +42,7 @@ import org.webrtc.Camera2Enumerator;
 import org.webrtc.CameraEnumerator;
 import org.webrtc.EglBase;
 import org.webrtc.FileVideoCapturer;
+import org.webrtc.ScreenCapturerAndroid;
 import org.webrtc.VideoFileRenderer;
 import org.webrtc.IceCandidate;
 import org.webrtc.Logging;
@@ -186,8 +189,8 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
     getWindow().addFlags(LayoutParams.FLAG_FULLSCREEN | LayoutParams.FLAG_KEEP_SCREEN_ON
         | LayoutParams.FLAG_DISMISS_KEYGUARD | LayoutParams.FLAG_SHOW_WHEN_LOCKED
         | LayoutParams.FLAG_TURN_SCREEN_ON);
-    getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-        | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+    getWindow().getDecorView().setSystemUiVisibility(
+            View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
     setContentView(R.layout.activity_call);
 
     iceConnected = false;
@@ -271,7 +274,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
 
     boolean loopback = intent.getBooleanExtra(EXTRA_LOOPBACK, false);
     boolean tracing = intent.getBooleanExtra(EXTRA_TRACING, false);
-    boolean captureDesktop = intent.getBooleanExtra(EXTRA_CAPTURE_DESKTOP, true);
+    boolean captureDesktop = captureDesktop();
     if(captureDesktop) {
       initMediaProjection();
     }
@@ -287,7 +290,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
     }
 
     peerConnectionParameters =
-        new PeerConnectionParameters(captureDesktop, intent.getBooleanExtra(EXTRA_VIDEO_CALL, true), loopback,
+        new PeerConnectionParameters(intent.getBooleanExtra(EXTRA_VIDEO_CALL, true), loopback,
             tracing, intent.getIntExtra(EXTRA_VIDEO_WIDTH, 0),
             intent.getIntExtra(EXTRA_VIDEO_HEIGHT, 0), intent.getIntExtra(EXTRA_VIDEO_FPS, 0),
             intent.getIntExtra(EXTRA_VIDEO_BITRATE, 0), intent.getStringExtra(EXTRA_VIDEOCODEC),
@@ -351,9 +354,13 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
         CallActivity.this, peerConnectionParameters, CallActivity.this);
   }
 
+  private boolean captureDesktop() {
+    return getIntent().getBooleanExtra(EXTRA_CAPTURE_DESKTOP, true);
+  }
 
   private boolean useCamera2() {
-    return Camera2Enumerator.isSupported(this) && getIntent().getBooleanExtra(EXTRA_CAMERA2, true);
+    return false;
+    //return Camera2Enumerator.isSupported(this) && getIntent().getBooleanExtra(EXTRA_CAMERA2, false);
   }
   @Override
   public void onSaveInstanceState(Bundle outState) {
@@ -364,11 +371,10 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
     }
   }
 
-  @TODO(msg = "Later find better option for getting cb")
   private void initMediaProjection() {
     Log.i(TAG, "initMediaProjection mResultData = " + mResultData);
     if (mResultData == null) {
-      MediaProjectionManager mp = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+      MediaProjectionManager mp = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
       startActivityForResult(mp.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION);
     }
   }
@@ -693,9 +699,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
       Logging.d(TAG, "Creating capturer using camera2 API.");
       videoCapturer = createCameraCapturer(new Camera2Enumerator(this));
     } else {
-      Logging.d(TAG, "Creating capturer using camera1 API.");
-      videoCapturer = createCameraCapturer(new Camera1Enumerator(captureToTexture()));
-    } else {
+      if (captureDesktop()) {
         MediaProjection.Callback mediaProjectionCallback = new MediaProjection.Callback() {
           @Override
           public void onStop() {
@@ -703,6 +707,11 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
           }
         };
         videoCapturer = new ScreenCapturerAndroid(getMediaProjectionResultData(), mediaProjectionCallback);
+      }
+      else {
+        Logging.d(TAG, "Creating capturer using camera1 API.");
+        videoCapturer = createCameraCapturer(new Camera1Enumerator(captureToTexture()));
+      }
     }
     
     if (videoCapturer == null) {
