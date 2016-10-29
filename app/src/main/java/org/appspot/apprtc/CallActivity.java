@@ -465,6 +465,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
     }
     activityRunning = false;
     rootEglBase.release();
+    reconnectActivity();
     super.onDestroy();
   }
 
@@ -725,6 +726,14 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
       return null;
     }
     return videoCapturer;
+  }
+
+
+  private void reconnectActivity() {
+    Intent intent = new Intent(this, ConnectActivity.class);
+    intent.putExtra(ConnectActivity.EXTRA_AUTO_RECONNECT, true);
+
+    startActivity(intent);
   }
 
   // -----Implementation of AppRTCClient.AppRTCSignalingEvents ---------------
