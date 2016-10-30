@@ -787,6 +787,8 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
   }
 
   private void waitForProj(){
+    if(!captureDesktop())
+      return;
     boolean onUIThread = Looper.myLooper() == Looper.getMainLooper();
     if (onUIThread)
       throw new Error("Not to be called on UI Thread");

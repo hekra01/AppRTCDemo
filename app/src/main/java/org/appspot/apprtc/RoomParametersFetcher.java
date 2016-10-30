@@ -181,6 +181,7 @@ public class RoomParametersFetcher {
                 + connection.getHeaderField(null));
       }
       InputStream responseStream = connection.getInputStream();
+
       String response = drainStream(responseStream);
       connection.disconnect();
       Log.d(TAG, "TURN response: " + response);

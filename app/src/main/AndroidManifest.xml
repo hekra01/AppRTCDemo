@@ -33,8 +33,8 @@
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="https" android:host="http://192.168.0.2:8084"/>
-                <data android:scheme="http" android:host="http://192.168.0.2:8084"/>
+                <data android:scheme="https" android:host="http://10.60.51.238:8084"/>
+                <data android:scheme="http" android:host="http://10.60.51.238:8084"/>
             </intent-filter>
         </activity>
 
