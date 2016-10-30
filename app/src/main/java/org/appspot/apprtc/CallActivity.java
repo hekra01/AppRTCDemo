@@ -140,6 +140,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
   private static final int REQUEST_MEDIA_PROJECTION = 1;
   private static final String STATE_RESULT_CODE = "result_code";
   private static final String STATE_RESULT_DATA = "result_data";
+  public static final int MPROJ_MAX_ATTEMPTS = 3;
 
   private PeerConnectionClient peerConnectionClient = null;
   private AppRTCClient appRtcClient;
@@ -261,7 +262,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
 
     Uri roomUri = intent.getData();
     if (roomUri == null) {
-      logAndToast(getString(R.string.missing_url));
+      logAndToast(getString(R.string.missing_url) + " roomUri = " + roomUri);
       Log.e(TAG, "Didn't get any URL in intent!");
       setResult(RESULT_CANCELED);
       finish();
@@ -272,7 +273,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
     String roomId = intent.getStringExtra(EXTRA_ROOMID);
     Log.d(TAG, "Room ID: " + roomId);
     if (roomId == null || roomId.length() == 0) {
-      logAndToast(getString(R.string.missing_url));
+      logAndToast(getString(R.string.missing_url) + " roomId = " + roomId);
       Log.e(TAG, "Incorrect room ID in intent!");
       setResult(RESULT_CANCELED);
       finish();
@@ -777,7 +778,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
   public void onConnectedToRoom(final SignalingParameters params) {
     dump("onConnectedToRoom");
     // no on ui thread, wait here for mediaproj completion
-    waitForProj();
+    waitForProj(MPROJ_MAX_ATTEMPTS);
     runOnUiThread(new Runnable() {
       @Override
       public void run() {
@@ -786,22 +787,28 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
     });
   }
 
-  private void waitForProj(){
+  private void waitForProj(int maxAttempts){
     if(!captureDesktop())
       return;
     boolean onUIThread = Looper.myLooper() == Looper.getMainLooper();
+
     if (onUIThread)
       throw new Error("Not to be called on UI Thread");
 
+    int i = 0;
     synchronized (lock) {
-      while (mResultData == null)
+      while (mResultData == null && ++i <= maxAttempts)
         try {
-          System.out.println("CallActivity.waitForProj");
+          System.out.println("CallActivity.waitForProj " + i + " times");
           lock.wait(1000);
+
         } catch (InterruptedException e) {
           e.printStackTrace();
         }
     }
+
+    if (mResultData == null)
+      reportError("Cant get MediaProjection");
   }
 
   @Override

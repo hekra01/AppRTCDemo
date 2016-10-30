@@ -177,7 +177,6 @@ public class ConnectActivity extends Activity {
     else if (autoReconnect){
       connectToRoom(room, false, loopback, useValuesFromIntent, runTimeMs);
     }
-
   }
 
   @Override
@@ -250,7 +249,7 @@ public class ConnectActivity extends Activity {
 
     roomId = sharedPref.getString(keyprefRoom, null);
 
-    if (roomId != null)
+    if (roomId != null && !roomId.isEmpty())
       return roomId;
 
     BufferedReader in = null;
@@ -352,11 +351,11 @@ public class ConnectActivity extends Activity {
     this.commandLineRun = commandLineRun;
 
     // roomId is random for loopback.
-    if (loopback) {
+    if (roomId == null) {
       roomId = getRoomId();
     }
 
-    String roomUrl = sharedPref.getString(
+    String roomServerUrl = sharedPref.getString(
         keyprefRoomServerUrl, getString(R.string.pref_room_server_url_default));
 
     // Video call enabled flag.
@@ -498,9 +497,9 @@ public class ConnectActivity extends Activity {
         R.string.pref_tracing_default, useValuesFromIntent);
 
     // Start AppRTCMobile activity.
-    Log.d(TAG, "Connecting to room " + roomId + " at URL " + roomUrl);
-    if (validateUrl(roomUrl)) {
-      Uri uri = Uri.parse(roomUrl);
+    Log.d(TAG, "Connecting to room " + roomId + " at URL " + roomServerUrl);
+    if (validateUrl(roomServerUrl)) {
+      Uri uri = Uri.parse(roomServerUrl);
       Intent intent = new Intent(this, CallActivity.class);
       intent.setData(uri);
       intent.putExtra(CallActivity.EXTRA_ROOMID, roomId);
