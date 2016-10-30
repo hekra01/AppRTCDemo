@@ -17,6 +17,7 @@ android {
 
     versionCode 14827
     versionName "r14827"
+    project.ext.set("archivesBaseName", "apprtc");
 
     testApplicationId "org.appspot.apprtc.test"
     testInstrumentationRunner "android.test.InstrumentationTestRunner"

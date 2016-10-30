@@ -240,7 +240,6 @@ public class ConnectActivity extends Activity {
   }
 
   private String getRoomId(){
-    if (true) return "123456";
     if (roomId != null)
       return roomId;
 
