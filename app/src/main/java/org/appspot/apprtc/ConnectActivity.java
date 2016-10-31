@@ -351,7 +351,7 @@ public class ConnectActivity extends Activity {
     this.commandLineRun = commandLineRun;
 
     // roomId is random for loopback.
-    if (roomId == null) {
+    if (roomId == null || roomId.isEmpty()) {
       roomId = getRoomId();
     }
 
