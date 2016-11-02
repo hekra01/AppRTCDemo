@@ -10,21 +10,26 @@
 
 package org.appspot.apprtc;
 
+import android.app.Activity;
+import android.content.Context;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.util.Log;
+
 import org.appspot.apprtc.RoomParametersFetcher.RoomParametersFetcherEvents;
 import org.appspot.apprtc.WebSocketChannelClient.WebSocketChannelEvents;
 import org.appspot.apprtc.WebSocketChannelClient.WebSocketConnectionState;
 import org.appspot.apprtc.util.AsyncHttpURLConnection;
 import org.appspot.apprtc.util.AsyncHttpURLConnection.AsyncHttpEvents;
-
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.util.Log;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.webrtc.IceCandidate;
 import org.webrtc.SessionDescription;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 
 /**
  * Negotiates signaling for chatting with https://appr.tc "rooms".
@@ -69,6 +74,8 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
   // parameters, retrieves room parameters and connect to WebSocket server.
   @Override
   public void connectToRoom(RoomConnectionParameters connectionParameters) {
+    Log.d(TAG, "WebSocketRTCClient.connectToRoom " + this, new Exception());
+
     this.connectionParameters = connectionParameters;
     handler.post(new Runnable() {
       @Override
@@ -91,8 +98,14 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
 
   // Connects to room - function runs on a local looper thread.
   private void connectToRoomInternal() {
+    String previousLeave = readLeaveUrl();
+    Log.d(TAG, "connectToRoomInternal previousLeave " + previousLeave);
+    /* for cleanup */
+    if (previousLeave != null){
+      sendPostMessage(MessageType.LEAVE, previousLeave, null);
+    }
     String connectionUrl = getConnectionUrl(connectionParameters);
-    Log.d(TAG, "Connect to room: " + connectionUrl);
+    Log.d(TAG, "Connect to room internal : " + connectionUrl + " " + this, new Exception());
     roomState = ConnectionState.NEW;
     wsClient = new WebSocketChannelClient(handler, this);
 
@@ -118,7 +131,7 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
 
   // Disconnect from room and send bye messages - runs on a local looper thread.
   private void disconnectFromRoomInternal() {
-    Log.d(TAG, "Disconnect. Room state: " + roomState);
+    Log.d(TAG, "Disconnect. Room state: " + roomState, new Exception());
     if (roomState == ConnectionState.CONNECTED) {
       Log.d(TAG, "Closing room.");
       sendPostMessage(MessageType.LEAVE, leaveUrl, null);
@@ -162,6 +175,7 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
     initiator = signalingParameters.initiator;
     messageUrl = getMessageUrl(connectionParameters, signalingParameters);
     leaveUrl = getLeaveUrl(connectionParameters, signalingParameters);
+    writeLeaveUrl();
     Log.d(TAG, "Message URL: " + messageUrl);
     Log.d(TAG, "Leave URL: " + leaveUrl);
     roomState = ConnectionState.CONNECTED;
@@ -172,6 +186,43 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
     // Connect and register WebSocket client.
     wsClient.connect(signalingParameters.wssUrl, signalingParameters.wssPostUrl);
     wsClient.register(connectionParameters.roomId, signalingParameters.clientId);
+  }
+
+  private void writeLeaveUrl() {
+    Activity activity = (Activity) this.events;
+    DataOutputStream out = null;
+    try {
+      out = new DataOutputStream(activity.openFileOutput("prevLeave.txt", Context.MODE_PRIVATE));
+      out.writeUTF(leaveUrl);
+    }
+    catch (IOException e) {
+      reportError("Can't write LEAVE URL" + leaveUrl);
+    }
+    finally {
+      if(out != null)
+        try {
+          out.close();
+        }
+        catch (IOException e) {}
+    }
+  }
+  private String readLeaveUrl() {
+    Activity activity = (Activity) this.events;
+    DataInputStream in = null;
+    try {
+      in = new DataInputStream(activity.openFileInput("prevLeave.txt"));
+      return in.readUTF();
+    }
+    catch (IOException e) {
+      return  null;
+    }
+    finally {
+      if (in != null)
+        try {
+          in.close();
+        } catch (IOException e) {
+        }
+    }
   }
 
   // Send local offer SDP to the other participant.
