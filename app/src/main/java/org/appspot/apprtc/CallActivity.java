@@ -772,6 +772,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
         }
       }
     }
+    moveTaskToBack(true);
   }
 
   @Override
