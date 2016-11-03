@@ -2,6 +2,7 @@
 <resources>
     <string-array name="videoResolutions">
         <item>Default</item>
+        <item>FHD (1920 x 1080)</item>
         <item>HD (1280 x 720)</item>
         <item>VGA (640 x 480)</item>
         <item>QVGA (320 x 240)</item>
@@ -9,6 +10,7 @@
 
     <string-array name="videoResolutionsValues">
         <item>Default</item>
+        <item>1920 x 1080</item>
         <item>1280 x 720</item>
         <item>640 x 480</item>
         <item>320 x 240</item>
