@@ -99,13 +99,15 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
   // Connects to room - function runs on a local looper thread.
   private void connectToRoomInternal() {
     String previousLeave = readLeaveUrl();
-    Log.d(TAG, "connectToRoomInternal previousLeave " + previousLeave);
     /* for cleanup */
     if (previousLeave != null){
       sendPostMessage(MessageType.LEAVE, previousLeave, null);
     }
     String connectionUrl = getConnectionUrl(connectionParameters);
-    Log.d(TAG, "Connect to room internal : " + connectionUrl + " " + this, new Exception());
+    Log.d(TAG, "Connect to room internal : " + connectionUrl + " previousLeave " +previousLeave +
+            " this " + this + " activity " + this.events + " Thread " +
+            Thread.currentThread(), new Exception());
+
     roomState = ConnectionState.NEW;
     wsClient = new WebSocketChannelClient(handler, this);
 

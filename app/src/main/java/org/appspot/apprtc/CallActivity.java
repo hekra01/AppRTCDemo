@@ -453,7 +453,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
     super.onResume();
     activityRunning = true;
     if (peerConnectionClient != null) {
-      peerConnectionClient.startVideoSource();
+      //peerConnectionClient.startVideoSource();
     }
     cpuMonitor.resume();
   }
