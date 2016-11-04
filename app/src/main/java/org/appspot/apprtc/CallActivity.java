@@ -171,8 +171,8 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
   private CallFragment callFragment;
   private HudFragment hudFragment;
   private CpuMonitor cpuMonitor;
-  private Intent mResultData;
-  private int mResultCode;
+  private Intent mediaProjResultData;
+  private int mediaProjResultCode;
   private final Object lock = new Object();
 
   @Override
@@ -181,10 +181,10 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
 
     if (captureDesktop()) {
       if (savedInstanceState != null) {
-        mResultCode = savedInstanceState.getInt(STATE_RESULT_CODE);
-        mResultData = savedInstanceState.getParcelable(STATE_RESULT_DATA);
+        mediaProjResultCode = savedInstanceState.getInt(STATE_RESULT_CODE);
+        mediaProjResultData = savedInstanceState.getParcelable(STATE_RESULT_DATA);
       }
-      if (mResultData == null){
+      if (mediaProjResultData == null){
         initMediaProjection();
       }
     }
@@ -369,16 +369,17 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
   @Override
   public void onSaveInstanceState(Bundle outState) {
     super.onSaveInstanceState(outState);
-    if (mResultData != null) {
-      outState.putInt(STATE_RESULT_CODE, mResultCode);
-      outState.putParcelable(STATE_RESULT_DATA, mResultData);
+    if (mediaProjResultData != null) {
+      outState.putInt(STATE_RESULT_CODE, mediaProjResultCode);
+      outState.putParcelable(STATE_RESULT_DATA, mediaProjResultData);
     }
   }
 
   private void initMediaProjection() {
     dump("initMediaProjection");
-    Log.i(TAG, "initMediaProjection mResultData = " + mResultData+" "+Thread.currentThread() + " time " +(System.currentTimeMillis()%10000));
-    if (mResultData == null) {
+    Log.i(TAG, "initMediaProjection mediaProjResultData = " + mediaProjResultData+" " +
+            Thread.currentThread() + " time " +(System.currentTimeMillis()%10000));
+    if (mediaProjResultData == null) {
       MediaProjectionManager mp = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
       startActivityForResult(mp.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION);
     }
@@ -394,8 +395,8 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
       }
       Log.i(TAG, "Starting screen capture");
       synchronized (lock){
-        mResultData = data;
-        mResultCode = resultCode;
+        mediaProjResultData = data;
+        mediaProjResultCode = resultCode;
         lock.notifyAll();
       }
     }
@@ -714,7 +715,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
             super.onStop();
           }
         };
-        videoCapturer = new ScreenCapturerAndroid(mResultData, mediaProjectionCallback);
+        videoCapturer = new ScreenCapturerAndroid(mediaProjResultData, mediaProjectionCallback);
       }
       else {
         Logging.d(TAG, "Creating capturer using camera1 API.");
@@ -798,7 +799,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
 
     int i = 0;
     synchronized (lock) {
-      while (mResultData == null && ++i <= maxAttempts)
+      while (mediaProjResultData == null && ++i <= maxAttempts)
         try {
           System.out.println("CallActivity.waitForProj " + i + " times");
           lock.wait(1000);
@@ -808,7 +809,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
         }
     }
 
-    if (mResultData == null)
+    if (mediaProjResultData == null)
       reportError("Cant get MediaProjection");
   }
 
