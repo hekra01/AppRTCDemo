@@ -106,7 +106,7 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
     String connectionUrl = getConnectionUrl(connectionParameters);
     Log.d(TAG, "Connect to room internal : " + connectionUrl + " previousLeave " +previousLeave +
             " this " + this + " activity " + this.events + " Thread " +
-            Thread.currentThread(), new Exception());
+            Thread.currentThread());
 
     roomState = ConnectionState.NEW;
     wsClient = new WebSocketChannelClient(handler, this);

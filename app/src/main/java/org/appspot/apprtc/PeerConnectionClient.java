@@ -84,7 +84,7 @@ public class PeerConnectionClient {
   private static final String DTLS_SRTP_KEY_AGREEMENT_CONSTRAINT = "DtlsSrtpKeyAgreement";
   private static final int HD_VIDEO_WIDTH = 1280;
   private static final int HD_VIDEO_HEIGHT = 720;
-  private static final int MAX_VIDEO_WIDTH = 1280;
+  private static final int MAX_VIDEO_WIDTH = 1920;
   private static final int MAX_VIDEO_HEIGHT = 1280;
   private static final int MAX_VIDEO_FPS = 30;
   private static final int BPS_IN_KBPS = 1000;
