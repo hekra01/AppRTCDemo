@@ -163,7 +163,7 @@ public class ConnectActivity extends Activity {
 
     // If an implicit VIEW intent is launching the app, go directly to that URL.
     final Intent intent = getIntent();
-    boolean autoReconnect = true || sharedPref.getBoolean(keyprefAutoReconnect, false) ||
+    boolean autoReconnect = sharedPref.getBoolean(keyprefAutoReconnect, false) ||
             intent.getBooleanExtra(EXTRA_AUTO_RECONNECT, false);
     boolean loopback = intent.getBooleanExtra(CallActivity.EXTRA_LOOPBACK, false);
     int runTimeMs = intent.getIntExtra(CallActivity.EXTRA_RUNTIME, 0);
