@@ -74,7 +74,7 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
   // parameters, retrieves room parameters and connect to WebSocket server.
   @Override
   public void connectToRoom(RoomConnectionParameters connectionParameters) {
-    Log.d(TAG, "WebSocketRTCClient.connectToRoom " + this, new Exception());
+    Log.d(TAG, "WebSocketRTCClient.connectToRoom " + this);
 
     this.connectionParameters = connectionParameters;
     handler.post(new Runnable() {

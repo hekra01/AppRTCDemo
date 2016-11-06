@@ -239,6 +239,8 @@ public class ConnectActivity extends Activity {
   }
 
   private String getRoomId(){
+    if (!true)
+      return "1234567";
     if (roomId != null)
       return roomId;
 
@@ -280,7 +282,7 @@ public class ConnectActivity extends Activity {
   @Override
   public void onResume() {
     super.onResume();
-    String room = sharedPref.getString(keyprefRoom, "");
+    String room = getRoomId();
     roomEditText.setText(room);
     roomList = new ArrayList<String>();
     String roomListJson = sharedPref.getString(keyprefRoomList, null);
