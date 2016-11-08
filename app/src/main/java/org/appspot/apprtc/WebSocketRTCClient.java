@@ -101,7 +101,7 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
     String previousLeave = readLeaveUrl();
     /* for cleanup */
     if (previousLeave != null){
-      sendPostMessage(MessageType.LEAVE, previousLeave, null);
+      sendPostMessage(MessageType.LEAVE, previousLeave, null, true);
     }
     String connectionUrl = getConnectionUrl(connectionParameters);
     Log.d(TAG, "Connect to room internal : " + connectionUrl + " previousLeave " +previousLeave +
@@ -425,20 +425,40 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
   // Send SDP or ICE candidate to a room server.
   private void sendPostMessage(
       final MessageType messageType, final String url, final String message) {
+     sendPostMessage(messageType, url, message, false);
+  }
+
+  private void sendPostMessage(
+    final MessageType messageType, final String url, final String message, boolean sync) {
     String logInfo = url;
     if (message != null) {
       logInfo += ". Message: " + message;
     }
     Log.d(TAG, "C->GAE: " + logInfo);
+
+    final boolean[] syncWait = sync ? new boolean[]{true} : null;
+
     AsyncHttpURLConnection httpConnection =
         new AsyncHttpURLConnection("POST", url, message, new AsyncHttpEvents() {
           @Override
           public void onHttpError(String errorMessage) {
+            if (syncWait != null){
+              synchronized (syncWait) {
+                syncWait.notify();
+                syncWait[0] = false;
+              }
+            }
             reportError("GAE POST error: " + errorMessage);
           }
 
           @Override
           public void onHttpComplete(String response) {
+            if (syncWait != null){
+              synchronized (syncWait) {
+                syncWait.notify();
+                syncWait[0] = false;
+              }
+            }
             if (messageType == MessageType.MESSAGE) {
               try {
                 JSONObject roomJson = new JSONObject(response);
@@ -453,6 +473,16 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
           }
         });
     httpConnection.send();
+
+    if (syncWait != null){
+      synchronized (syncWait) {
+        if (syncWait[0])
+          try {
+            syncWait.wait();
+          }
+          catch (InterruptedException e) {}
+      }
+    }
   }
 
   // Converts a Java candidate to a JSONObject.
