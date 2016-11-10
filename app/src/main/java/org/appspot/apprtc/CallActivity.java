@@ -145,7 +145,6 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
   private static final int REMOTE_HEIGHT = 100;
   private static final String STATE_RESULT_CODE = "result_code";
   private static final String STATE_RESULT_DATA = "result_data";
-  public static final int MPROJ_MAX_ATTEMPTS = 5;
 
   private PeerConnectionClient peerConnectionClient = null;
   private AppRTCClient appRtcClient;
