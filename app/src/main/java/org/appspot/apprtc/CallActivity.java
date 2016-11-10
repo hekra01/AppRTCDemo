@@ -179,23 +179,10 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
   private CallFragment callFragment;
   private HudFragment hudFragment;
   private CpuMonitor cpuMonitor;
-  private Intent mediaProjResultData;
-  private int mediaProjResultCode;
-  private final Object lock = new Object();
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-
-    if (captureDesktop()) {
-      if (savedInstanceState != null) {
-        mediaProjResultCode = savedInstanceState.getInt(STATE_RESULT_CODE);
-        mediaProjResultData = savedInstanceState.getParcelable(STATE_RESULT_DATA);
-      }
-      if (mediaProjResultData == null){
-        initMediaProjection();
-      }
-    }
 
     Thread.setDefaultUncaughtExceptionHandler(new UnhandledExceptionHandler(this));
 
@@ -379,14 +366,20 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
         CallActivity.this, peerConnectionParameters, CallActivity.this);
 
     if (screencaptureEnabled) {
-      MediaProjectionManager mediaProjectionManager =
-          (MediaProjectionManager) getApplication().getSystemService(
-              Context.MEDIA_PROJECTION_SERVICE);
-      startActivityForResult(
-          mediaProjectionManager.createScreenCaptureIntent(), CAPTURE_PERMISSION_REQUEST_CODE);
-    } else {
-      startCall();
+      if (savedInstanceState != null) {
+        mediaProjectionPermissionResultCode = savedInstanceState.getInt(STATE_RESULT_CODE);
+        mediaProjectionPermissionResultData = savedInstanceState.getParcelable(STATE_RESULT_DATA);
+      }
+      if (mediaProjectionPermissionResultData == null) {
+        MediaProjectionManager mediaProjectionManager =
+                (MediaProjectionManager) getApplication().getSystemService(
+                        Context.MEDIA_PROJECTION_SERVICE);
+        startActivityForResult(
+                mediaProjectionManager.createScreenCaptureIntent(), CAPTURE_PERMISSION_REQUEST_CODE);
+        return;
+      }
     }
+    startCall();
   }
 
   @Override
@@ -404,9 +397,9 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
   @Override
   public void onSaveInstanceState(Bundle outState) {
     super.onSaveInstanceState(outState);
-    if (mediaProjResultData != null) {
-      outState.putInt(STATE_RESULT_CODE, mediaProjResultCode);
-      outState.putParcelable(STATE_RESULT_DATA, mediaProjResultData);
+    if (mediaProjectionPermissionResultData != null) {
+      outState.putInt(STATE_RESULT_CODE, mediaProjectionPermissionResultCode);
+      outState.putParcelable(STATE_RESULT_DATA, mediaProjectionPermissionResultData);
     }
   }
 
@@ -798,30 +791,6 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
         onConnectedToRoomInternal(params);
       }
     });
-  }
-
-  private void waitForProj(int maxAttempts){
-    if(!captureDesktop())
-      return;
-    boolean onUIThread = Looper.myLooper() == Looper.getMainLooper();
-
-    if (onUIThread)
-      throw new Error("Not to be called on UI Thread");
-
-    int i = 0;
-    synchronized (lock) {
-      while (mediaProjResultData == null && ++i <= maxAttempts)
-        try {
-          System.out.println("CallActivity.waitForProj " + i + " times");
-          lock.wait(1000);
-
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-    }
-
-    if (mediaProjResultData == null)
-      reportError("Cant get MediaProjection");
   }
 
   @Override
