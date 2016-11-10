@@ -18,6 +18,7 @@ import org.appspot.apprtc.PeerConnectionClient.DataChannelParameters;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.FragmentTransaction;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -27,9 +28,11 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowManager;
 import android.view.WindowManager.LayoutParams;
 import android.widget.Toast;
 
@@ -49,10 +52,12 @@ import org.webrtc.IceCandidate;
 import org.webrtc.Logging;
 import org.webrtc.PeerConnectionFactory;
 import org.webrtc.RendererCommon.ScalingType;
+import org.webrtc.ScreenCapturerAndroid;
 import org.webrtc.SessionDescription;
 import org.webrtc.StatsReport;
 import org.webrtc.SurfaceViewRenderer;
 import org.webrtc.VideoCapturer;
+import org.webrtc.VideoFileRenderer;
 import org.webrtc.VideoRenderer;
 
 /**
@@ -62,10 +67,10 @@ import org.webrtc.VideoRenderer;
 public class CallActivity extends Activity implements AppRTCClient.SignalingEvents,
                                                       PeerConnectionClient.PeerConnectionEvents,
                                                       CallFragment.OnCallEvents {
-  public static final String EXTRA_CAPTURE_DESKTOP = "org.appspot.apprtc.DESKTOP";
   public static final String EXTRA_ROOMID = "org.appspot.apprtc.ROOMID";
   public static final String EXTRA_LOOPBACK = "org.appspot.apprtc.LOOPBACK";
   public static final String EXTRA_VIDEO_CALL = "org.appspot.apprtc.VIDEO_CALL";
+  public static final String EXTRA_SCREENCAPTURE = "org.appspot.apprtc.SCREENCAPTURE";
   public static final String EXTRA_CAMERA2 = "org.appspot.apprtc.CAMERA2";
   public static final String EXTRA_VIDEO_WIDTH = "org.appspot.apprtc.VIDEO_WIDTH";
   public static final String EXTRA_VIDEO_HEIGHT = "org.appspot.apprtc.VIDEO_HEIGHT";
@@ -115,6 +120,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
           "org.appspot.apprtc.ID";
 
   private static final String TAG = "CallRTCClient";
+  private static final int CAPTURE_PERMISSION_REQUEST_CODE = 1;
 
   // List of mandatory application permissions.
   private static final String[] MANDATORY_PERMISSIONS = {"android.permission.MODIFY_AUDIO_SETTINGS",
@@ -137,7 +143,6 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
   private static final int REMOTE_Y = 0;
   private static final int REMOTE_WIDTH = 100;
   private static final int REMOTE_HEIGHT = 100;
-  private static final int REQUEST_MEDIA_PROJECTION = 1;
   private static final String STATE_RESULT_CODE = "result_code";
   private static final String STATE_RESULT_DATA = "result_data";
   public static final int MPROJ_MAX_ATTEMPTS = 5;
@@ -166,6 +171,9 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
   private boolean callControlFragmentVisible = true;
   private long callStartedTimeMs = 0;
   private boolean micEnabled = true;
+  private boolean screencaptureEnabled = false;
+  private static Intent mediaProjectionPermissionResultData;
+  private static int mediaProjectionPermissionResultCode;
 
   // Controls
   private CallFragment callFragment;
@@ -294,10 +302,23 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
               intent.getIntExtra(EXTRA_ID, -1));
     }
 
+    int videoWidth = intent.getIntExtra(EXTRA_VIDEO_WIDTH, 0);
+    int videoHeight = intent.getIntExtra(EXTRA_VIDEO_HEIGHT, 0);
+
+    screencaptureEnabled = intent.getBooleanExtra(EXTRA_SCREENCAPTURE, false);
+    // If capturing format is not specified for screencapture, use screen resolution.
+    if (screencaptureEnabled && videoWidth == 0 && videoHeight == 0) {
+      DisplayMetrics displayMetrics = new DisplayMetrics();
+      WindowManager windowManager =
+          (WindowManager) getApplication().getSystemService(Context.WINDOW_SERVICE);
+      windowManager.getDefaultDisplay().getRealMetrics(displayMetrics);
+      videoWidth = displayMetrics.widthPixels;
+      videoHeight = displayMetrics.heightPixels;
+    }
+
     peerConnectionParameters =
         new PeerConnectionParameters(intent.getBooleanExtra(EXTRA_VIDEO_CALL, true), loopback,
-            tracing, intent.getIntExtra(EXTRA_VIDEO_WIDTH, 0),
-            intent.getIntExtra(EXTRA_VIDEO_HEIGHT, 0), intent.getIntExtra(EXTRA_VIDEO_FPS, 0),
+            tracing, videoWidth, videoHeight, intent.getIntExtra(EXTRA_VIDEO_FPS, 0),
             intent.getIntExtra(EXTRA_VIDEO_BITRATE, 0), intent.getStringExtra(EXTRA_VIDEOCODEC),
             intent.getBooleanExtra(EXTRA_HWCODEC_ENABLED, true),
             intent.getIntExtra(EXTRA_AUDIO_BITRATE, 0), intent.getStringExtra(EXTRA_AUDIOCODEC),
@@ -337,7 +358,6 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
     ft.add(R.id.call_fragment_container, callFragment);
     ft.add(R.id.hud_fragment_container, hudFragment);
     ft.commit();
-    startCall();
 
     // For command line execution run connection for <runTimeMs> and exit.
     if (commandLineRun && runTimeMs > 0) {
@@ -357,10 +377,25 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
     }
     peerConnectionClient.createPeerConnectionFactory(
         CallActivity.this, peerConnectionParameters, CallActivity.this);
+
+    if (screencaptureEnabled) {
+      MediaProjectionManager mediaProjectionManager =
+          (MediaProjectionManager) getApplication().getSystemService(
+              Context.MEDIA_PROJECTION_SERVICE);
+      startActivityForResult(
+          mediaProjectionManager.createScreenCaptureIntent(), CAPTURE_PERMISSION_REQUEST_CODE);
+    } else {
+      startCall();
+    }
   }
 
-  private boolean captureDesktop() {
-    return getIntent().getBooleanExtra(EXTRA_CAPTURE_DESKTOP, true);
+  @Override
+  public void onActivityResult(int requestCode, int resultCode, Intent data) {
+    if (requestCode != CAPTURE_PERMISSION_REQUEST_CODE)
+      return;
+    mediaProjectionPermissionResultCode = resultCode;
+    mediaProjectionPermissionResultData = data;
+    startCall();
   }
 
   private boolean useCamera2() {
@@ -372,33 +407,6 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
     if (mediaProjResultData != null) {
       outState.putInt(STATE_RESULT_CODE, mediaProjResultCode);
       outState.putParcelable(STATE_RESULT_DATA, mediaProjResultData);
-    }
-  }
-
-  private void initMediaProjection() {
-    dump("initMediaProjection");
-    Log.i(TAG, "initMediaProjection mediaProjResultData = " + mediaProjResultData+" " +
-            Thread.currentThread() + " time " +(System.currentTimeMillis()%10000));
-    if (mediaProjResultData == null) {
-      MediaProjectionManager mp = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
-      startActivityForResult(mp.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION);
-    }
-  }
-
-  public void onActivityResult(int requestCode, int resultCode, Intent data) {
-    dump("onActivityResult");
-    Log.i(TAG, "onActivityResult requestCode = " + requestCode + " resultCode " + resultCode + " data " + data);
-    if (requestCode == REQUEST_MEDIA_PROJECTION) {
-      if (resultCode != Activity.RESULT_OK) {
-        Log.i(TAG, "User cancelled");
-        return;
-      }
-      Log.i(TAG, "Starting screen capture");
-      synchronized (lock){
-        mediaProjResultData = data;
-        mediaProjResultCode = resultCode;
-        lock.notifyAll();
-      }
     }
   }
 
@@ -443,8 +451,10 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
   public void onPause() {
     super.onPause();
     activityRunning = false;
-    if (peerConnectionClient != null) {
-      //peerConnectionClient.stopVideoSource();
+    // Don't stop the video when using screencapture to allow user to show other apps to the remote
+    // end.
+    if (peerConnectionClient != null && !screencaptureEnabled) {
+      peerConnectionClient.stopVideoSource();
     }
     cpuMonitor.pause();
   }
@@ -453,8 +463,9 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
   public void onResume() {
     super.onResume();
     activityRunning = true;
-    if (peerConnectionClient != null) {
-      //peerConnectionClient.startVideoSource();
+    // Video is not paused for screencapture. See onPause.
+    if (peerConnectionClient != null && !screencaptureEnabled) {
+      peerConnectionClient.startVideoSource();
     }
     cpuMonitor.resume();
   }
@@ -699,6 +710,18 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
         reportError("Failed to open video file for emulated camera");
         return null;
       }
+    } else if (screencaptureEnabled) {
+      if (mediaProjectionPermissionResultCode != Activity.RESULT_OK) {
+        reportError("User didn't give permission to capture the screen.");
+        return null;
+      }
+      return new ScreenCapturerAndroid(
+          mediaProjectionPermissionResultData, new MediaProjection.Callback() {
+            @Override
+            public void onStop() {
+              reportError("User revoked permission to capture the screen.");
+            }
+          });
     } else if (useCamera2()) {
       if (!captureToTexture()) {
         reportError(getString(R.string.camera2_texture_only_error));
@@ -708,21 +731,9 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
       Logging.d(TAG, "Creating capturer using camera2 API.");
       videoCapturer = createCameraCapturer(new Camera2Enumerator(this));
     } else {
-      if (captureDesktop()) {
-        MediaProjection.Callback mediaProjectionCallback = new MediaProjection.Callback() {
-          @Override
-          public void onStop() {
-            super.onStop();
-          }
-        };
-        videoCapturer = new ScreenCapturerAndroid(mediaProjResultData, mediaProjectionCallback);
-      }
-      else {
-        Logging.d(TAG, "Creating capturer using camera1 API.");
-        videoCapturer = createCameraCapturer(new Camera1Enumerator(captureToTexture()));
-      }
+      Logging.d(TAG, "Creating capturer using camera1 API.");
+      videoCapturer = createCameraCapturer(new Camera1Enumerator(captureToTexture()));
     }
-    
     if (videoCapturer == null) {
       reportError("Failed to open camera");
       return null;
@@ -780,7 +791,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
   public void onConnectedToRoom(final SignalingParameters params) {
     dump("onConnectedToRoom");
     // no on ui thread, wait here for mediaproj completion
-    waitForProj(MPROJ_MAX_ATTEMPTS);
+    // waitForProj(MPROJ_MAX_ATTEMPTS);
     runOnUiThread(new Runnable() {
       @Override
       public void run() {
