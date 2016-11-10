@@ -375,10 +375,12 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
                         Context.MEDIA_PROJECTION_SERVICE);
         startActivityForResult(
                 mediaProjectionManager.createScreenCaptureIntent(), CAPTURE_PERMISSION_REQUEST_CODE);
-        return;
       }
+      else
+        startCall();
     }
-    startCall();
+    else
+      startCall();
   }
 
   @Override
