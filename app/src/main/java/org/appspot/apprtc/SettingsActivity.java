@@ -151,6 +151,7 @@ public class SettingsActivity extends Activity implements OnSharedPreferenceChan
     updateSummary(sharedPreferences, keyprefDataProtocol);
     updateSummaryB(sharedPreferences, keyprefNegotiated);
     updateSummary(sharedPreferences, keyprefDataId);
+    setDataChannelEnable(sharedPreferences);
 
     if (!Camera2Enumerator.isSupported(this)) {
       Preference camera2Preference = settingsFragment.findPreference(keyprefCamera2);
