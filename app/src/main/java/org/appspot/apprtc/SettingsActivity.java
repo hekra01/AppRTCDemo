@@ -143,12 +143,14 @@ public class SettingsActivity extends Activity implements OnSharedPreferenceChan
     updateSummary(sharedPreferences, keyPrefRoomServerUrl);
     updateSummaryB(sharedPreferences, keyPrefDisplayHud);
     updateSummaryB(sharedPreferences, keyPrefTracing);
-    updateSummaryB(sharedPreferences, keyprefEnableDataChannel);
 
-    updateSummary(sharedPreferences, keyprefMaxRetransmits);
+    updateSummaryB(sharedPreferences, keyprefEnableDataChannel);
+    updateSummaryB(sharedPreferences, keyprefOrdered);
     updateSummary(sharedPreferences, keyprefMaxRetransmitTimeMs);
-    updateSummary(sharedPreferences, keyprefDataId);
+    updateSummary(sharedPreferences, keyprefMaxRetransmits);
     updateSummary(sharedPreferences, keyprefDataProtocol);
+    updateSummaryB(sharedPreferences, keyprefNegotiated);
+    updateSummary(sharedPreferences, keyprefDataId);
 
     if (!Camera2Enumerator.isSupported(this)) {
       Preference camera2Preference = settingsFragment.findPreference(keyprefCamera2);
@@ -204,7 +206,11 @@ public class SettingsActivity extends Activity implements OnSharedPreferenceChan
         || key.equals(keyPrefVideoCodec)
         || key.equals(keyprefStartAudioBitrateType)
         || key.equals(keyPrefAudioCodec)
-        || key.equals(keyPrefRoomServerUrl)) {
+        || key.equals(keyPrefRoomServerUrl)
+        || key.equals(keyprefMaxRetransmitTimeMs)
+        || key.equals(keyprefMaxRetransmits)
+        || key.equals(keyprefDataProtocol)
+        || key.equals(keyprefDataId)) {
       updateSummary(sharedPreferences, key);
     } else if (key.equals(keyprefMaxVideoBitrateValue)
         || key.equals(keyprefStartAudioBitrateValue)) {
@@ -223,7 +229,10 @@ public class SettingsActivity extends Activity implements OnSharedPreferenceChan
         || key.equals(keyprefDisableBuiltInAGC)
         || key.equals(keyprefDisableBuiltInNS)
         || key.equals(keyprefEnableLevelControl)
-        || key.equals(keyPrefDisplayHud)) {
+        || key.equals(keyPrefDisplayHud)
+        || key.equals(keyprefEnableDataChannel)
+        || key.equals(keyprefOrdered)
+        || key.equals(keyprefNegotiated)) {
       updateSummaryB(sharedPreferences, key);
     } else if (key.equals(keyprefSpeakerphone)) {
       updateSummaryList(sharedPreferences, key);
