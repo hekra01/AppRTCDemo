@@ -101,7 +101,7 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
     String previousLeave = readLeaveUrl();
     /* for cleanup */
     if (previousLeave != null){
-      sendPostMessage(MessageType.LEAVE, previousLeave, null, true);
+      sendPostMessage(MessageType.LEAVE, previousLeave, null, true, true);
     }
     String connectionUrl = getConnectionUrl(connectionParameters);
     Log.d(TAG, "Connect to room internal : " + connectionUrl + " previousLeave " +previousLeave +
@@ -425,11 +425,12 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
   // Send SDP or ICE candidate to a room server.
   private void sendPostMessage(
       final MessageType messageType, final String url, final String message) {
-     sendPostMessage(messageType, url, message, false);
+     sendPostMessage(messageType, url, message, false, false);
   }
 
   private void sendPostMessage(
-    final MessageType messageType, final String url, final String message, boolean sync) {
+    final MessageType messageType, final String url, final String message, boolean sync,
+    final boolean silent) {
     String logInfo = url;
     if (message != null) {
       logInfo += ". Message: " + message;
@@ -448,7 +449,8 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
                 syncWait[0] = false;
               }
             }
-            reportError("GAE POST error: " + errorMessage);
+            if(!silent)
+              reportError("GAE POST error: " + errorMessage);
           }
 
           @Override
@@ -463,11 +465,14 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
               try {
                 JSONObject roomJson = new JSONObject(response);
                 String result = roomJson.getString("result");
-                if (!result.equals("SUCCESS")) {
+                if (!silent && !result.equals("SUCCESS")) {
                   reportError("GAE POST error: " + result);
                 }
               } catch (JSONException e) {
-                reportError("GAE POST JSON error: " + e.toString());
+                if (silent)
+                  Log.e(TAG, "GAE POST JSON error: " + e.toString());
+                else
+                  reportError("GAE POST JSON error: " + e.toString());
               }
             }
           }
