@@ -443,24 +443,16 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
         new AsyncHttpURLConnection("POST", url, message, new AsyncHttpEvents() {
           @Override
           public void onHttpError(String errorMessage) {
-            if (syncWait != null){
-              synchronized (syncWait) {
-                syncWait.notify();
-                syncWait[0] = false;
-              }
-            }
+            notifyLock(syncWait);
+
             if(!silent)
               reportError("GAE POST error: " + errorMessage);
           }
 
           @Override
           public void onHttpComplete(String response) {
-            if (syncWait != null){
-              synchronized (syncWait) {
-                syncWait.notify();
-                syncWait[0] = false;
-              }
-            }
+            notifyLock(syncWait);
+
             if (messageType == MessageType.MESSAGE) {
               try {
                 JSONObject roomJson = new JSONObject(response);
@@ -478,7 +470,10 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
           }
         });
     httpConnection.send();
+    waitLock(syncWait);
+  }
 
+  private void waitLock(boolean[] syncWait) {
     if (syncWait != null){
       synchronized (syncWait) {
         if (syncWait[0])
@@ -486,6 +481,15 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
             syncWait.wait();
           }
           catch (InterruptedException e) {}
+      }
+    }
+  }
+
+  private void notifyLock(boolean[] syncWait) {
+    if (syncWait != null){
+      synchronized (syncWait) {
+        syncWait.notify();
+        syncWait[0] = false;
       }
     }
   }
