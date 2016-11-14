@@ -38,19 +38,10 @@ import java.util.Random;
 import org.json.JSONArray;
 import org.json.JSONException;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Random;
-
 /**
  * Handles the initial setup where the user selects which room to join.
  */
 public class ConnectActivity extends Activity {
-  public static final String EXTRA_AUTO_RECONNECT =
-          "org.appspot.apprtc.RECONNECT";
   private static final String TAG = "ConnectActivity";
   private static final int CONNECTION_REQUEST = 1;
   private static final int REMOVE_FAVORITE_INDEX = 0;
@@ -96,8 +87,6 @@ public class ConnectActivity extends Activity {
   private String keyprefDataProtocol;
   private String keyprefNegotiated;
   private String keyprefDataId;
-  private String keyprefAutoReconnect;
-  private String roomId;
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
@@ -139,7 +128,7 @@ public class ConnectActivity extends Activity {
     keyprefDataProtocol = getString(R.string.pref_data_protocol_key);
     keyprefNegotiated = getString(R.string.pref_negotiated_key);
     keyprefDataId = getString(R.string.pref_data_id_key);
-    keyprefAutoReconnect = getString(R.string.pref_auto_reconnect_key);
+
     setContentView(R.layout.activity_connect);
 
     roomEditText = (EditText) findViewById(R.id.room_edittext);
@@ -166,19 +155,13 @@ public class ConnectActivity extends Activity {
 
     // If an implicit VIEW intent is launching the app, go directly to that URL.
     final Intent intent = getIntent();
-    boolean autoReconnect = sharedPref.getBoolean(keyprefAutoReconnect, false) ||
-            intent.getBooleanExtra(EXTRA_AUTO_RECONNECT, false);
-    boolean loopback = intent.getBooleanExtra(CallActivity.EXTRA_LOOPBACK, false);
-    int runTimeMs = intent.getIntExtra(CallActivity.EXTRA_RUNTIME, 0);
-    boolean useValuesFromIntent =
-            intent.getBooleanExtra(CallActivity.EXTRA_USE_VALUES_FROM_INTENT, false);
-    String room = getRoomId();
-
     if ("android.intent.action.VIEW".equals(intent.getAction()) && !commandLineRun) {
+      boolean loopback = intent.getBooleanExtra(CallActivity.EXTRA_LOOPBACK, false);
+      int runTimeMs = intent.getIntExtra(CallActivity.EXTRA_RUNTIME, 0);
+      boolean useValuesFromIntent =
+          intent.getBooleanExtra(CallActivity.EXTRA_USE_VALUES_FROM_INTENT, false);
+      String room = sharedPref.getString(keyprefRoom, "");
       connectToRoom(room, true, loopback, useValuesFromIntent, runTimeMs);
-    }
-    else if (autoReconnect){
-      connectToRoom(room, false, loopback, useValuesFromIntent, runTimeMs);
     }
   }
 
@@ -241,51 +224,10 @@ public class ConnectActivity extends Activity {
     editor.commit();
   }
 
-  private String getRoomId(){
-    if (!true)
-      return "1234567";
-    if (roomId != null)
-      return roomId;
-
-    boolean loopback = getIntent().getBooleanExtra(CallActivity.EXTRA_LOOPBACK, false);
-
-    if (loopback)
-      return roomId = Integer.toString((new Random()).nextInt(1000000));
-
-    roomId = sharedPref.getString(keyprefRoom, null);
-
-    if (roomId != null && !roomId.isEmpty())
-      return roomId;
-
-    BufferedReader in = null;
-    StringBuilder out;
-    try {
-      in = new BufferedReader(new InputStreamReader(new FileInputStream("/private/sf/id.txt")));
-      out = new StringBuilder();
-      String line;
-      while ((line = in.readLine()) != null) {
-        out.append(line);
-      }
-      roomId = out.toString().replace('.', '_');
-    }
-    catch (IOException e) {
-      Log.e(TAG, "Generating room id failed, fallback to random");
-      roomId = Integer.toString((new Random()).nextInt(1000000));
-    }
-    finally {
-      if (in != null)
-        try {
-          in.close();
-        } catch (IOException e) {}
-    }
-
-    return roomId;
-  }
-
   @Override
   public void onResume() {
     super.onResume();
-    String room = getRoomId();
+    String room = sharedPref.getString(keyprefRoom, "");
     roomEditText.setText(room);
     roomList = new ArrayList<String>();
     String roomListJson = sharedPref.getString(keyprefRoomList, null);
@@ -373,11 +315,11 @@ public class ConnectActivity extends Activity {
     this.commandLineRun = commandLineRun;
 
     // roomId is random for loopback.
-    if (roomId == null || roomId.isEmpty()) {
-      roomId = getRoomId();
+    if (loopback) {
+      roomId = Integer.toString((new Random()).nextInt(100000000));
     }
 
-    String roomServerUrl = sharedPref.getString(
+    String roomUrl = sharedPref.getString(
         keyprefRoomServerUrl, getString(R.string.pref_room_server_url_default));
 
     // Video call enabled flag.
@@ -542,9 +484,9 @@ public class ConnectActivity extends Activity {
         CallActivity.EXTRA_PROTOCOL, R.string.pref_data_protocol_default, useValuesFromIntent);
 
     // Start AppRTCMobile activity.
-    Log.d(TAG, "Connecting to room " + roomId + " at URL " + roomServerUrl);
-    if (validateUrl(roomServerUrl)) {
-      Uri uri = Uri.parse(roomServerUrl);
+    Log.d(TAG, "Connecting to room " + roomId + " at URL " + roomUrl);
+    if (validateUrl(roomUrl)) {
+      Uri uri = Uri.parse(roomUrl);
       Intent intent = new Intent(this, CallActivity.class);
       intent.setData(uri);
       intent.putExtra(CallActivity.EXTRA_ROOMID, roomId);

@@ -10,14 +10,24 @@
 
 package org.appspot.apprtc;
 
-import org.appspot.apprtc.AppRTCClient.SignalingParameters;
-
 import android.content.Context;
 import android.os.Environment;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
-
-import org.appspot.apprtc.util.UInput;
+import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.appspot.apprtc.AppRTCClient.SignalingParameters;
 import org.webrtc.AudioSource;
 import org.webrtc.AudioTrack;
 import org.webrtc.CameraVideoCapturer;
@@ -42,20 +52,6 @@ import org.webrtc.VideoSource;
 import org.webrtc.VideoTrack;
 import org.webrtc.voiceengine.WebRtcAudioManager;
 import org.webrtc.voiceengine.WebRtcAudioUtils;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Peer connection client implementation.
@@ -84,9 +80,6 @@ public class PeerConnectionClient {
   private static final String DTLS_SRTP_KEY_AGREEMENT_CONSTRAINT = "DtlsSrtpKeyAgreement";
   private static final int HD_VIDEO_WIDTH = 1280;
   private static final int HD_VIDEO_HEIGHT = 720;
-  private static final int MAX_VIDEO_WIDTH = 1920;
-  private static final int MAX_VIDEO_HEIGHT = 1280;
-  private static final int MAX_VIDEO_FPS = 30;
   private static final int BPS_IN_KBPS = 1000;
 
   private static final PeerConnectionClient instance = new PeerConnectionClient();
@@ -97,7 +90,6 @@ public class PeerConnectionClient {
   private Context context;
   private PeerConnectionFactory factory;
   private PeerConnection peerConnection;
-  private DataChannel dataChannel;
   PeerConnectionFactory.Options options = null;
   private AudioSource audioSource;
   private VideoSource videoSource;
@@ -135,6 +127,7 @@ public class PeerConnectionClient {
   // enableAudio is set to true if audio should be sent.
   private boolean enableAudio;
   private AudioTrack localAudioTrack;
+  private DataChannel dataChannel;
   private boolean dataChannelEnabled;
 
   /**
@@ -148,9 +141,8 @@ public class PeerConnectionClient {
     public final boolean negotiated;
     public final int id;
 
-    public DataChannelParameters(
-            boolean ordered, int maxRetransmitTimeMs, int maxRetransmits, String protocol,
-            boolean negotiated, int id) {
+    public DataChannelParameters(boolean ordered, int maxRetransmitTimeMs, int maxRetransmits,
+        String protocol, boolean negotiated, int id) {
       this.ordered = ordered;
       this.maxRetransmitTimeMs = maxRetransmitTimeMs;
       this.maxRetransmits = maxRetransmits;
@@ -183,6 +175,17 @@ public class PeerConnectionClient {
     public final boolean disableBuiltInNS;
     public final boolean enableLevelControl;
     private final DataChannelParameters dataChannelParameters;
+
+    public PeerConnectionParameters(boolean videoCallEnabled, boolean loopback, boolean tracing,
+        int videoWidth, int videoHeight, int videoFps, int videoMaxBitrate, String videoCodec,
+        boolean videoCodecHwAcceleration, int audioStartBitrate, String audioCodec,
+        boolean noAudioProcessing, boolean aecDump, boolean useOpenSLES, boolean disableBuiltInAEC,
+        boolean disableBuiltInAGC, boolean disableBuiltInNS, boolean enableLevelControl) {
+      this(videoCallEnabled, loopback, tracing, videoWidth, videoHeight, videoFps, videoMaxBitrate,
+          videoCodec, videoCodecHwAcceleration, audioStartBitrate, audioCodec, noAudioProcessing,
+          aecDump, useOpenSLES, disableBuiltInAEC, disableBuiltInAGC, disableBuiltInNS,
+          enableLevelControl, null);
+    }
 
     public PeerConnectionParameters(boolean videoCallEnabled, boolean loopback, boolean tracing,
         int videoWidth, int videoHeight, int videoFps, int videoMaxBitrate, String videoCodec,
@@ -302,13 +305,7 @@ public class PeerConnectionClient {
     executor.execute(new Runnable() {
       @Override
       public void run() {
-        try {
-          createPeerConnectionFactoryInternal(context);
-        }
-        catch (Throwable e) {
-          e.printStackTrace();
-          throw new Error(e);
-        }
+        createPeerConnectionFactoryInternal(context);
       }
     });
   }
@@ -465,10 +462,7 @@ public class PeerConnectionClient {
       if (videoFps == 0) {
         videoFps = 30;
       }
-
-      videoWidth = Math.min(videoWidth, MAX_VIDEO_WIDTH);
-      videoHeight = Math.min(videoHeight, MAX_VIDEO_HEIGHT);
-      videoFps = Math.min(videoFps, MAX_VIDEO_FPS);
+      Logging.d(TAG, "Capturing format: " + videoWidth + "x" + videoHeight + "@" + videoFps);
     }
 
     // Create audio constraints.
@@ -530,6 +524,7 @@ public class PeerConnectionClient {
     rtcConfig.keyType = PeerConnection.KeyType.ECDSA;
 
     peerConnection = factory.createPeerConnection(rtcConfig, pcConstraints, pcObserver);
+
     if (dataChannelEnabled) {
       DataChannel.Init init = new DataChannel.Init();
       init.ordered = peerConnectionParameters.dataChannelParameters.ordered;
@@ -600,7 +595,6 @@ public class PeerConnectionClient {
       } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
-      videoCapturerStopped = true;
       videoCapturer.dispose();
       videoCapturer = null;
     }
@@ -1136,21 +1130,19 @@ public class PeerConnectionClient {
 
     @Override
     public void onDataChannel(final DataChannel dc) {
-      Log.d(TAG, "NEW Data channel " + dc.label());
+      Log.d(TAG, "New Data channel " + dc.label());
 
       if (!dataChannelEnabled)
         return;
 
       dc.registerObserver(new DataChannel.Observer() {
-        public void onBufferedAmountChange(long var1){
-          Log.d(TAG,
-                  "Data channel buffered amount changed: " + dc.label() + ": " + dc.state());
+        public void onBufferedAmountChange(long previousAmount) {
+          Log.d(TAG, "Data channel buffered amount changed: " + dc.label() + ": " + dc.state());
         }
 
         @Override
         public void onStateChange() {
-          Log.d(TAG,
-                  "Data channel state changed: " + dc.label() + ": " + dc.state());
+          Log.d(TAG, "Data channel state changed: " + dc.label() + ": " + dc.state());
         }
 
         @Override
@@ -1160,22 +1152,10 @@ public class PeerConnectionClient {
             return;
           }
           ByteBuffer data = buffer.data;
-          final byte[] bytes = new byte[ data.capacity() ];
+          final byte[] bytes = new byte[data.capacity()];
           data.get(bytes);
-          Runnable command = new Runnable() {
-                @Override
-                public void run() {
-                    // Get DC message as String.
-                    String strData = new String(bytes);
-                    Log.d(TAG, "Got msg: " + strData + " over " + dc);
-                    try {
-                        UInput.getInstance().writecmd(strData);
-                    } catch (IOException e) {
-                        throw new Error(e);
-                    }
-                }
-            };
-            executor.execute(command);
+          String strData = new String(bytes);
+          Log.d(TAG, "Got msg: " + strData + " over " + dc);
         }
       });
     }

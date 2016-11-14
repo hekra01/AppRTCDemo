@@ -10,26 +10,21 @@
 
 package org.appspot.apprtc;
 
-import android.app.Activity;
-import android.content.Context;
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.util.Log;
-
 import org.appspot.apprtc.RoomParametersFetcher.RoomParametersFetcherEvents;
 import org.appspot.apprtc.WebSocketChannelClient.WebSocketChannelEvents;
 import org.appspot.apprtc.WebSocketChannelClient.WebSocketConnectionState;
 import org.appspot.apprtc.util.AsyncHttpURLConnection;
 import org.appspot.apprtc.util.AsyncHttpURLConnection.AsyncHttpEvents;
+
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.util.Log;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.webrtc.IceCandidate;
 import org.webrtc.SessionDescription;
-
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
 
 /**
  * Negotiates signaling for chatting with https://appr.tc "rooms".
@@ -74,8 +69,6 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
   // parameters, retrieves room parameters and connect to WebSocket server.
   @Override
   public void connectToRoom(RoomConnectionParameters connectionParameters) {
-    Log.d(TAG, "WebSocketRTCClient.connectToRoom " + this);
-
     this.connectionParameters = connectionParameters;
     handler.post(new Runnable() {
       @Override
@@ -98,16 +91,8 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
 
   // Connects to room - function runs on a local looper thread.
   private void connectToRoomInternal() {
-    String previousLeave = readLeaveUrl();
-    /* for cleanup */
-    if (previousLeave != null){
-      sendPostMessage(MessageType.LEAVE, previousLeave, null, true, true);
-    }
     String connectionUrl = getConnectionUrl(connectionParameters);
-    Log.d(TAG, "Connect to room internal : " + connectionUrl + " previousLeave " +previousLeave +
-            " this " + this + " activity " + this.events + " Thread " +
-            Thread.currentThread());
-
+    Log.d(TAG, "Connect to room: " + connectionUrl);
     roomState = ConnectionState.NEW;
     wsClient = new WebSocketChannelClient(handler, this);
 
@@ -133,7 +118,7 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
 
   // Disconnect from room and send bye messages - runs on a local looper thread.
   private void disconnectFromRoomInternal() {
-    Log.d(TAG, "Disconnect. Room state: " + roomState, new Exception());
+    Log.d(TAG, "Disconnect. Room state: " + roomState);
     if (roomState == ConnectionState.CONNECTED) {
       Log.d(TAG, "Closing room.");
       sendPostMessage(MessageType.LEAVE, leaveUrl, null);
@@ -177,7 +162,6 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
     initiator = signalingParameters.initiator;
     messageUrl = getMessageUrl(connectionParameters, signalingParameters);
     leaveUrl = getLeaveUrl(connectionParameters, signalingParameters);
-    writeLeaveUrl();
     Log.d(TAG, "Message URL: " + messageUrl);
     Log.d(TAG, "Leave URL: " + leaveUrl);
     roomState = ConnectionState.CONNECTED;
@@ -188,43 +172,6 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
     // Connect and register WebSocket client.
     wsClient.connect(signalingParameters.wssUrl, signalingParameters.wssPostUrl);
     wsClient.register(connectionParameters.roomId, signalingParameters.clientId);
-  }
-
-  private void writeLeaveUrl() {
-    Activity activity = (Activity) this.events;
-    DataOutputStream out = null;
-    try {
-      out = new DataOutputStream(activity.openFileOutput("prevLeave.txt", Context.MODE_PRIVATE));
-      out.writeUTF(leaveUrl);
-    }
-    catch (IOException e) {
-      reportError("Can't write LEAVE URL" + leaveUrl);
-    }
-    finally {
-      if(out != null)
-        try {
-          out.close();
-        }
-        catch (IOException e) {}
-    }
-  }
-  private String readLeaveUrl() {
-    Activity activity = (Activity) this.events;
-    DataInputStream in = null;
-    try {
-      in = new DataInputStream(activity.openFileInput("prevLeave.txt"));
-      return in.readUTF();
-    }
-    catch (IOException e) {
-      return  null;
-    }
-    finally {
-      if (in != null)
-        try {
-          in.close();
-        } catch (IOException e) {
-        }
-    }
   }
 
   // Send local offer SDP to the other participant.
@@ -425,73 +372,34 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
   // Send SDP or ICE candidate to a room server.
   private void sendPostMessage(
       final MessageType messageType, final String url, final String message) {
-     sendPostMessage(messageType, url, message, false, false);
-  }
-
-  private void sendPostMessage(
-    final MessageType messageType, final String url, final String message, boolean sync,
-    final boolean silent) {
     String logInfo = url;
     if (message != null) {
       logInfo += ". Message: " + message;
     }
     Log.d(TAG, "C->GAE: " + logInfo);
-
-    final boolean[] syncWait = sync ? new boolean[]{true} : null;
-
     AsyncHttpURLConnection httpConnection =
         new AsyncHttpURLConnection("POST", url, message, new AsyncHttpEvents() {
           @Override
           public void onHttpError(String errorMessage) {
-            notifyLock(syncWait);
-
-            if(!silent)
-              reportError("GAE POST error: " + errorMessage);
+            reportError("GAE POST error: " + errorMessage);
           }
 
           @Override
           public void onHttpComplete(String response) {
-            notifyLock(syncWait);
-
             if (messageType == MessageType.MESSAGE) {
               try {
                 JSONObject roomJson = new JSONObject(response);
                 String result = roomJson.getString("result");
-                if (!silent && !result.equals("SUCCESS")) {
+                if (!result.equals("SUCCESS")) {
                   reportError("GAE POST error: " + result);
                 }
               } catch (JSONException e) {
-                if (silent)
-                  Log.e(TAG, "GAE POST JSON error: " + e.toString());
-                else
-                  reportError("GAE POST JSON error: " + e.toString());
+                reportError("GAE POST JSON error: " + e.toString());
               }
             }
           }
         });
     httpConnection.send();
-    waitLock(syncWait);
-  }
-
-  private void waitLock(boolean[] syncWait) {
-    if (syncWait != null){
-      synchronized (syncWait) {
-        if (syncWait[0])
-          try {
-            syncWait.wait();
-          }
-          catch (InterruptedException e) {}
-      }
-    }
-  }
-
-  private void notifyLock(boolean[] syncWait) {
-    if (syncWait != null){
-      synchronized (syncWait) {
-        syncWait.notify();
-        syncWait[0] = false;
-      }
-    }
   }
 
   // Converts a Java candidate to a JSONObject.
