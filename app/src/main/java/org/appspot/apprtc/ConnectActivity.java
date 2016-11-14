@@ -351,6 +351,21 @@ public class ConnectActivity extends Activity {
     }
   }
 
+  /**
+   * Get a value from the shared preference or from the intent, if it does not
+   * exist the default is used.
+   */
+  private int sharedPrefGetInteger(
+      int attributeId, String intentName, int defaultId, boolean useFromIntent) {
+    int defaultValue = Integer.parseInt(getString(defaultId));
+    if (useFromIntent) {
+      return getIntent().getIntExtra(intentName, defaultValue);
+    } else {
+      String attributeName = getString(attributeId);
+      return sharedPref.getInt(attributeName, defaultValue);
+    }
+  }
+
   private void connectToRoom(String roomId, boolean commandLineRun, boolean loopback,
       boolean useValuesFromIntent, int runTimeMs) {
     this.commandLineRun = commandLineRun;
@@ -505,6 +520,25 @@ public class ConnectActivity extends Activity {
     boolean tracing = sharedPrefGetBoolean(R.string.pref_tracing_key, CallActivity.EXTRA_TRACING,
         R.string.pref_tracing_default, useValuesFromIntent);
 
+    // Get datachannel options
+    boolean dataChannelEnabled = sharedPrefGetBoolean(R.string.pref_enable_datachannel_key,
+        CallActivity.EXTRA_DATA_CHANNEL_ENABLED, R.string.pref_enable_datachannel_default,
+        useValuesFromIntent);
+    boolean ordered = sharedPrefGetBoolean(R.string.pref_ordered_key, CallActivity.EXTRA_ORDERED,
+        R.string.pref_ordered_default, useValuesFromIntent);
+    boolean negotiated = sharedPrefGetBoolean(R.string.pref_negotiated_key,
+        CallActivity.EXTRA_NEGOTIATED, R.string.pref_negotiated_default, useValuesFromIntent);
+    int maxRetrMs = sharedPrefGetInteger(R.string.pref_max_retransmit_time_ms_key,
+        CallActivity.EXTRA_MAX_RETRANSMITS_MS, R.string.pref_max_retransmit_time_ms_default,
+        useValuesFromIntent);
+    int maxRetr =
+        sharedPrefGetInteger(R.string.pref_max_retransmits_key, CallActivity.EXTRA_MAX_RETRANSMITS,
+            R.string.pref_max_retransmits_default, useValuesFromIntent);
+    int id = sharedPrefGetInteger(R.string.pref_data_id_key, CallActivity.EXTRA_ID,
+        R.string.pref_data_id_default, useValuesFromIntent);
+    String protocol = sharedPrefGetString(R.string.pref_data_protocol_key,
+        CallActivity.EXTRA_PROTOCOL, R.string.pref_data_protocol_default, useValuesFromIntent);
+
     // Start AppRTCMobile activity.
     Log.d(TAG, "Connecting to room " + roomId + " at URL " + roomServerUrl);
     if (validateUrl(roomServerUrl)) {
@@ -538,6 +572,17 @@ public class ConnectActivity extends Activity {
       intent.putExtra(CallActivity.EXTRA_CMDLINE, commandLineRun);
       intent.putExtra(CallActivity.EXTRA_RUNTIME, runTimeMs);
 
+      intent.putExtra(CallActivity.EXTRA_DATA_CHANNEL_ENABLED, dataChannelEnabled);
+
+      if (dataChannelEnabled) {
+        intent.putExtra(CallActivity.EXTRA_ORDERED, ordered);
+        intent.putExtra(CallActivity.EXTRA_MAX_RETRANSMITS_MS, maxRetrMs);
+        intent.putExtra(CallActivity.EXTRA_MAX_RETRANSMITS, maxRetr);
+        intent.putExtra(CallActivity.EXTRA_PROTOCOL, protocol);
+        intent.putExtra(CallActivity.EXTRA_NEGOTIATED, negotiated);
+        intent.putExtra(CallActivity.EXTRA_ID, id);
+      }
+
       if (useValuesFromIntent) {
         if (getIntent().hasExtra(CallActivity.EXTRA_VIDEO_FILE_AS_CAMERA)) {
           String videoFileAsCamera =
@@ -562,24 +607,6 @@ public class ConnectActivity extends Activity {
               getIntent().getIntExtra(CallActivity.EXTRA_SAVE_REMOTE_VIDEO_TO_FILE_HEIGHT, 0);
           intent.putExtra(CallActivity.EXTRA_SAVE_REMOTE_VIDEO_TO_FILE_HEIGHT, videoOutHeight);
         }
-      }
-      //Get datachannel options
-      boolean dataChannelEnabled = sharedPref.getBoolean(keyprefEnableDataChannel, true);
-      intent.putExtra(CallActivity.EXTRA_DATA_CHANNEL_ENABLED, dataChannelEnabled);
-
-      if (dataChannelEnabled) {
-        boolean ordered = sharedPref.getBoolean(keyprefOrdered, true);
-        boolean negotiated = sharedPref.getBoolean(keyprefNegotiated, false);
-        int maxRetrMs = Integer.parseInt(sharedPref.getString(keyprefMaxRetransmitTimeMs, "-1"));
-        int maxRetr = Integer.parseInt(sharedPref.getString(keyprefMaxRetransmits, "-1"));
-        int id = Integer.parseInt(sharedPref.getString(keyprefDataId, "-1"));
-        String protocol = sharedPref.getString(keyprefDataProtocol, "");
-        intent.putExtra(CallActivity.EXTRA_ORDERED, ordered);
-        intent.putExtra(CallActivity.EXTRA_MAX_RETRANSMITS_MS, maxRetrMs);
-        intent.putExtra(CallActivity.EXTRA_MAX_RETRANSMITS, maxRetr);
-        intent.putExtra(CallActivity.EXTRA_PROTOCOL, protocol);
-        intent.putExtra(CallActivity.EXTRA_NEGOTIATED, negotiated);
-        intent.putExtra(CallActivity.EXTRA_ID, id);
       }
 
       startActivityForResult(intent, CONNECTION_REQUEST);
