@@ -357,12 +357,14 @@ public class ConnectActivity extends Activity {
    */
   private int sharedPrefGetInteger(
       int attributeId, String intentName, int defaultId, boolean useFromIntent) {
-    int defaultValue = Integer.parseInt(getString(defaultId));
+    String defaultString = getString(defaultId);
+    int defaultValue = Integer.parseInt(defaultString);
     if (useFromIntent) {
       return getIntent().getIntExtra(intentName, defaultValue);
     } else {
       String attributeName = getString(attributeId);
-      return sharedPref.getInt(attributeName, defaultValue);
+      String value = sharedPref.getString(attributeName, defaultString);
+      return Integer.parseInt(value);
     }
   }
 
