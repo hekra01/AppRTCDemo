@@ -364,7 +364,13 @@ public class ConnectActivity extends Activity {
     } else {
       String attributeName = getString(attributeId);
       String value = sharedPref.getString(attributeName, defaultString);
-      return Integer.parseInt(value);
+      try {
+        return Integer.parseInt(value);
+      }
+      catch (NumberFormatException e) {
+        Log.e(TAG, "Wrong setting for " +attributeName + ":" + value);
+        return defaultValue;
+      }
     }
   }
 
