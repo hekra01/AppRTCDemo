@@ -230,6 +230,14 @@
             android:title="@string/pref_tracing_title"
             android:dialogTitle="@string/pref_tracing_dlg"
            android:defaultValue="@string/pref_tracing_default" />
+
+        <EditTextPreference
+            android:key="@string/pref_prev_room_key"
+            android:title="@string/pref_prev_room_title"
+            android:inputType="text"
+            android:defaultValue="@string/pref_prev_room_default"
+            android:dialogTitle="@string/pref_prev_room_dlg" />
+
     </PreferenceCategory>
 
 </PreferenceScreen>

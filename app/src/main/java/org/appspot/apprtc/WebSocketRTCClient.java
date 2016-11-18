@@ -12,8 +12,10 @@ package org.appspot.apprtc;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.preference.PreferenceManager;
 import android.util.Log;
 
 import org.appspot.apprtc.RoomParametersFetcher.RoomParametersFetcherEvents;
@@ -100,7 +102,7 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
   private void connectToRoomInternal() {
     String previousLeave = readLeaveUrl();
     /* for cleanup */
-    if (previousLeave != null){
+    if (previousLeave != null && !previousLeave.isEmpty()){
       sendPostMessage(MessageType.LEAVE, previousLeave, null, true, true);
     }
     String connectionUrl = getConnectionUrl(connectionParameters);
@@ -191,39 +193,56 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
   }
 
   private void writeLeaveUrl() {
-    Activity activity = (Activity) this.events;
-    DataOutputStream out = null;
-    try {
-      out = new DataOutputStream(activity.openFileOutput("prevLeave.txt", Context.MODE_PRIVATE));
-      out.writeUTF(leaveUrl);
+    if (true) {
+      Context events = (Context) this.events;
+      SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(events).edit();
+      String key = events.getString(R.string.pref_prev_room_key);
+      editor.putString(key, leaveUrl);
+      editor.commit();
     }
-    catch (IOException e) {
-      reportError("Can't write LEAVE URL" + leaveUrl);
-    }
-    finally {
-      if(out != null)
-        try {
-          out.close();
-        }
-        catch (IOException e) {}
+    else {
+      Activity activity = (Activity) this.events;
+      DataOutputStream out = null;
+      try {
+        out = new DataOutputStream(activity.openFileOutput("prevLeave.txt", Context.MODE_PRIVATE));
+        out.writeUTF(leaveUrl);
+      } catch (IOException e) {
+        reportError("Can't write LEAVE URL" + leaveUrl);
+      } finally {
+        if (out != null)
+          try {
+            out.close();
+          } catch (IOException e) {
+          }
+      }
     }
   }
+
   private String readLeaveUrl() {
-    Activity activity = (Activity) this.events;
-    DataInputStream in = null;
-    try {
-      in = new DataInputStream(activity.openFileInput("prevLeave.txt"));
-      return in.readUTF();
+    if (true) {
+      Context events = (Context) this.events;
+      SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(events);
+      String key = events.getString(R.string.pref_prev_room_key);
+
+      return pref.getString(key, "");
     }
-    catch (IOException e) {
-      return  null;
-    }
-    finally {
-      if (in != null)
-        try {
-          in.close();
-        } catch (IOException e) {
-        }
+    else {
+      Activity activity = (Activity) this.events;
+      DataInputStream in = null;
+      try {
+        in = new DataInputStream(activity.openFileInput("prevLeave.txt"));
+        return in.readUTF();
+      }
+      catch (IOException e) {
+        return  null;
+      }
+      finally {
+        if (in != null)
+          try {
+            in.close();
+          } catch (IOException e) {
+          }
+      }
     }
   }
 

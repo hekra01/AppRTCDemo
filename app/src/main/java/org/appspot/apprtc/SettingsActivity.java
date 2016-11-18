@@ -208,6 +208,7 @@ public class SettingsActivity extends Activity implements OnSharedPreferenceChan
         || key.equals(keyprefStartAudioBitrateType)
         || key.equals(keyPrefAudioCodec)
         || key.equals(keyPrefRoomServerUrl)
+        || key.equals(getString(R.string.pref_prev_room_key))
         || key.equals(keyprefMaxRetransmitTimeMs)
         || key.equals(keyprefMaxRetransmits)
         || key.equals(keyprefDataProtocol)

@@ -211,4 +211,9 @@
     <string name="pref_tracing_title">Debug performance tracing.</string>
     <string name="pref_tracing_dlg">Debug performance tracing.</string>
     <string name="pref_tracing_default" translatable="false">false</string>
+
+    <string name="pref_prev_room_key">prev_room_preference</string>
+    <string name="pref_prev_room_title">Set prev room.</string>
+    <string name="pref_prev_room_dlg">Set prev room.</string>
+    <string name="pref_prev_room_default" translatable="true"></string>
 </resources>
