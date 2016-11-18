@@ -48,6 +48,7 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
   private static final String ROOM_JOIN = "join";
   private static final String ROOM_MESSAGE = "message";
   private static final String ROOM_LEAVE = "leave";
+  public static final boolean SAVE_LEAVE_TO_PREFS = true;
 
   private enum ConnectionState { NEW, CONNECTED, CLOSED, ERROR }
 
@@ -193,7 +194,7 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
   }
 
   private void writeLeaveUrl() {
-    if (true) {
+    if (SAVE_LEAVE_TO_PREFS) {
       Context events = (Context) this.events;
       SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(events).edit();
       String key = events.getString(R.string.pref_prev_room_key);
@@ -219,7 +220,7 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
   }
 
   private String readLeaveUrl() {
-    if (true) {
+    if (SAVE_LEAVE_TO_PREFS) {
       Context events = (Context) this.events;
       SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(events);
       String key = events.getString(R.string.pref_prev_room_key);
