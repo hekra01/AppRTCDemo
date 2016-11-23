@@ -171,6 +171,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
   private CallFragment callFragment;
   private HudFragment hudFragment;
   private CpuMonitor cpuMonitor;
+  private boolean manualDisconnect;
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
@@ -468,7 +469,7 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
   // CallFragment.OnCallEvents interface implementation.
   @Override
   public void onCallHangUp() {
-    disconnect();
+    disconnect(true);
   }
 
   @Override
@@ -587,11 +588,17 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
 
   // Disconnect from remote resources, dispose of local resources, and exit.
   private void disconnect() {
+    disconnect(false);
+  }
+
+  private void disconnect(boolean manual) {
     activityRunning = false;
     boolean firstTime = appRtcClient != null;
 
     if(!firstTime)
       return;
+
+    manualDisconnect = manual;
 
     if (appRtcClient != null) {
       appRtcClient.disconnectFromRoom();
@@ -722,7 +729,10 @@ public class CallActivity extends Activity implements AppRTCClient.SignalingEven
 
   private void reconnectActivity() {
     Intent intent = new Intent(this, ConnectActivity.class);
-    intent.putExtra(ConnectActivity.EXTRA_AUTO_RECONNECT, true);
+    if (manualDisconnect)
+      manualDisconnect = false;
+    else
+      intent.putExtra(ConnectActivity.EXTRA_AUTO_RECONNECT, true);
 
     startActivity(intent);
   }
