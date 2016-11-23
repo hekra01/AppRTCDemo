@@ -163,7 +163,7 @@
             android:key="@string/pref_enable_datachannel_key"
             android:title="@string/pref_enable_datachannel_title"
             android:defaultValue="@string/pref_enable_datachannel_default" />
-
+<!--
         <CheckBoxPreference
             android:key="@string/pref_ordered_key"
             android:title="@string/pref_ordered_title"
@@ -201,6 +201,7 @@
             android:inputType="number"
             android:defaultValue="@string/pref_data_id_default"
             android:dialogTitle="@string/pref_data_id_dlg" />
+        -->
     </PreferenceCategory>
 
     <PreferenceCategory

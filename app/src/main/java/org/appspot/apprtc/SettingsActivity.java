@@ -254,7 +254,8 @@ public class SettingsActivity extends Activity implements OnSharedPreferenceChan
   private void updateSummary(SharedPreferences sharedPreferences, String key) {
     Preference updatedPref = settingsFragment.findPreference(key);
     // Set summary to be the user-description for the selected value
-    updatedPref.setSummary(sharedPreferences.getString(key, ""));
+    if (updatedPref != null)
+      updatedPref.setSummary(sharedPreferences.getString(key, ""));
   }
 
   private void updateSummaryBitrate(SharedPreferences sharedPreferences, String key) {
@@ -264,7 +265,8 @@ public class SettingsActivity extends Activity implements OnSharedPreferenceChan
 
   private void updateSummaryB(SharedPreferences sharedPreferences, String key) {
     Preference updatedPref = settingsFragment.findPreference(key);
-    updatedPref.setSummary(sharedPreferences.getBoolean(key, true)
+    if (updatedPref != null)
+      updatedPref.setSummary(sharedPreferences.getBoolean(key, true)
             ? getString(R.string.pref_value_enabled)
             : getString(R.string.pref_value_disabled));
   }
@@ -302,11 +304,23 @@ public class SettingsActivity extends Activity implements OnSharedPreferenceChan
 
   private void setDataChannelEnable(SharedPreferences sharedPreferences) {
     boolean enabled = sharedPreferences.getBoolean(keyprefEnableDataChannel, true);
-    settingsFragment.findPreference(keyprefOrdered).setEnabled(enabled);
-    settingsFragment.findPreference(keyprefMaxRetransmitTimeMs).setEnabled(enabled);
-    settingsFragment.findPreference(keyprefMaxRetransmits).setEnabled(enabled);
-    settingsFragment.findPreference(keyprefDataProtocol).setEnabled(enabled);
-    settingsFragment.findPreference(keyprefNegotiated).setEnabled(enabled);
-    settingsFragment.findPreference(keyprefDataId).setEnabled(enabled);
+    Preference preference = settingsFragment.findPreference(keyprefOrdered);
+    if (preference != null)
+      preference.setEnabled(enabled);
+    preference = settingsFragment.findPreference(keyprefMaxRetransmitTimeMs);
+    if (preference != null)
+      preference.setEnabled(enabled);
+    preference = settingsFragment.findPreference(keyprefMaxRetransmits);
+    if (preference != null)
+      preference.setEnabled(enabled);
+    preference = settingsFragment.findPreference(keyprefDataProtocol);
+    if (preference != null)
+      preference.setEnabled(enabled);
+    preference = settingsFragment.findPreference(keyprefNegotiated);
+    if (preference != null)
+      preference.setEnabled(enabled);
+    preference = settingsFragment.findPreference(keyprefDataId);
+    if (preference != null)
+      preference.setEnabled(enabled);
   }
 }
