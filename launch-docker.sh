@@ -37,12 +37,11 @@ fi
 sleep 15
 
 run-adb.sh $INSTANCE install apprtc-debug.apk
-#run-adb.sh $INSTANCE install sf.apk
-#run-adb.sh $INSTANCE install sf_k_stb-charlety_ux-debug.apk
-#run-adb.sh $INSTANCE install com.google.android.youtube_apkmirror.com.apk
 run-adb.sh $INSTANCE install sf_k_stb-tmeibc-debug.apk
 run-adb.sh $INSTANCE shell ./PrepareSdcard.sh
 IP=$(ifconfig enp3s0 | grep addr: | awk '{ print ip=$2 }' | cut -d: -f2)
+
+# temporary workaroud for instance 4
 if [ $INSTANCE -eq 4 ]
   then
     run-adb.sh $INSTANCE shell "echo shuttle-instance$INSTANCE > /private/sf/id.txt"
