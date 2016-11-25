@@ -24,7 +24,7 @@ cd /home/dgaumont/Downloads
 #sudo chmod 666 /dev/binder /dev/ashmem
 #Nohup ./service_manager >/dev/null  2>1 &
 
-docker kill android-instance-$INSTANCE&
+docker rm -f android-instance-$INSTANCE&
 sleep 2
 
 if [ "$NEW_STREAM" == true ]
