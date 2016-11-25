@@ -35,6 +35,8 @@ import android.widget.ListView;
 import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.Random;
+
+import org.appspot.apprtc.util.Utils;
 import org.json.JSONArray;
 import org.json.JSONException;
 
@@ -257,29 +259,12 @@ public class ConnectActivity extends Activity {
     if (roomId != null && !roomId.isEmpty())
       return roomId;
 
-    BufferedReader in = null;
-    StringBuilder out;
-    try {
-      in = new BufferedReader(new InputStreamReader(new FileInputStream("/private/sf/id.txt")));
-      out = new StringBuilder();
-      String line;
-      while ((line = in.readLine()) != null) {
-        out.append(line);
-      }
-      roomId = out.toString().replace('.', '_');
-    }
-    catch (IOException e) {
-      Log.e(TAG, "Generating room id failed, fallback to random");
-      roomId = Integer.toString((new Random()).nextInt(1000000));
-    }
-    finally {
-      if (in != null)
-        try {
-          in.close();
-        } catch (IOException e) {}
-    }
+    roomId = Utils.getRoomId();
 
-    return roomId;
+    if (roomId != null && !roomId.isEmpty())
+      return roomId;
+
+    return roomId = Integer.toString((new Random()).nextInt(1000000));
   }
 
   @Override

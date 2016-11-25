@@ -23,15 +23,23 @@ import org.appspot.apprtc.WebSocketChannelClient.WebSocketChannelEvents;
 import org.appspot.apprtc.WebSocketChannelClient.WebSocketConnectionState;
 import org.appspot.apprtc.util.AsyncHttpURLConnection;
 import org.appspot.apprtc.util.AsyncHttpURLConnection.AsyncHttpEvents;
+import org.appspot.apprtc.util.Utils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.webrtc.IceCandidate;
 import org.webrtc.SessionDescription;
 
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 
 /**
  * Negotiates signaling for chatting with https://appr.tc "rooms".
@@ -48,7 +56,7 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
   private static final String ROOM_JOIN = "join";
   private static final String ROOM_MESSAGE = "message";
   private static final String ROOM_LEAVE = "leave";
-  public static final boolean SAVE_LEAVE_TO_PREFS = true;
+  public static final boolean SAVE_LEAVE_TO_PREFS = !true;
 
   private enum ConnectionState { NEW, CONNECTED, CLOSED, ERROR }
 
@@ -202,19 +210,20 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
       editor.commit();
     }
     else {
-      Activity activity = (Activity) this.events;
+      int inst = Utils.getInstanceId();
       DataOutputStream out = null;
       try {
-        out = new DataOutputStream(activity.openFileOutput("prevLeave.txt", Context.MODE_PRIVATE));
-        out.writeUTF(leaveUrl);
-      } catch (IOException e) {
-        reportError("Can't write LEAVE URL" + leaveUrl);
-      } finally {
+        out = new DataOutputStream((new FileOutputStream("/private/sf/leave" + inst +".txt")));
+       out.writeUTF(leaveUrl);
+      }
+      catch (IOException e) {
+        Log.e(TAG, "Generating room id failed, fallback to random");
+      }
+      finally {
         if (out != null)
           try {
             out.close();
-          } catch (IOException e) {
-          }
+          } catch (IOException e) {}
       }
     }
   }
@@ -228,16 +237,14 @@ public class WebSocketRTCClient implements AppRTCClient, WebSocketChannelEvents 
       return pref.getString(key, "");
     }
     else {
-      Activity activity = (Activity) this.events;
+      int inst = Utils.getInstanceId();
       DataInputStream in = null;
       try {
-        in = new DataInputStream(activity.openFileInput("prevLeave.txt"));
+        in = new DataInputStream(new FileInputStream("/private/sf/leave" + inst + ".txt"));
         return in.readUTF();
-      }
-      catch (IOException e) {
-        return  null;
-      }
-      finally {
+      } catch (IOException e) {
+        return null;
+      } finally {
         if (in != null)
           try {
             in.close();

@@ -64,8 +64,8 @@ public class PostLeave {
 
     public static void main(String[] args) {
         String roomUrl ="http://10.60.61.27:8084";
-        String roomId="shuttle-instance-4";
-        String clientId="54872117";
+        String roomId="shuttle-instance4";
+        String clientId="09676357"; //
         String previousLeave = roomUrl+ "/" + ROOM_LEAVE + "/" + roomId + "/"
                 + clientId;
         sendPostMessageStatic(MessageType.LEAVE, previousLeave, null);

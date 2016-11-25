@@ -6,6 +6,7 @@ import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -22,6 +23,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -229,5 +231,41 @@ public class Utils {
             System.out.println("info: INJECT_INPUT_EVENT_MODE_WAIT_FOR_FINISH.field=" + INJECT_INPUT_EVENT_MODE_WAIT_FOR_FINISH);
         sysClock = Class.forName("android.os.SystemClock").getMethod("uptimeMillis");
         if (DBG) System.out.println("<<FacetsKeyInj.initInj()");
+    }
+
+    public static String getRoomId() {
+        BufferedReader in = null;
+        StringBuilder out;
+        try {
+            in = new BufferedReader(new InputStreamReader(new FileInputStream("/private/sf/id.txt")));
+            out = new StringBuilder();
+            String line;
+            while ((line = in.readLine()) != null) {
+                out.append(line);
+            }
+            return out.toString().replace('.', '_');
+        }
+        catch (IOException e) {
+            Log.e(TAG, "Generating room id failed, fallback to random");
+            return null;
+        }
+        finally {
+            if (in != null)
+                try {
+                    in.close();
+                } catch (IOException e) {}
+        }
+    }
+    public static int getInstanceId() {
+        String roomId = getRoomId();
+        if (roomId == null)
+            return -1;
+
+        try {
+            return Integer.parseInt("" + roomId.charAt(roomId.length() - 1));
+        }
+        catch (NumberFormatException e) {
+            return -1;
+        }
     }
 }
