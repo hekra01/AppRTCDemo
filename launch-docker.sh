@@ -24,6 +24,7 @@ cd /home/dgaumont/Downloads
 #sudo chmod 666 /dev/binder /dev/ashmem
 #Nohup ./service_manager >/dev/null  2>1 &
 
+docker kill android-instance-$INSTANCE&
 docker rm -f android-instance-$INSTANCE&
 sleep 2
 
@@ -38,23 +39,19 @@ sleep 15
 
 run-adb.sh $INSTANCE install apprtc-debug.apk
 run-adb.sh $INSTANCE install sf_k_stb-tmeibc-debug.apk
+run-adb.sh $INSTANCE install sf_k_stb-tmeces-debug.apk
+#run-adb.sh $INSTANCE install sf.apk
+run-adb.sh $INSTANCE install XN2D5W0M-bleedingEdge-debug-apkst-align.apk
 run-adb.sh $INSTANCE shell ./PrepareSdcard.sh
 IP=$(ifconfig enp3s0 | grep addr: | awk '{ print ip=$2 }' | cut -d: -f2)
-
-# temporary workaroud for instance 4
-if [ $INSTANCE -eq 4 ]
-  then
-    run-adb.sh $INSTANCE shell "echo shuttle-instance$INSTANCE > /private/sf/id.txt"
-else
-  run-adb.sh $INSTANCE shell "echo shuttle-instance-$INSTANCE > /private/sf/id.txt"
-fi
+run-adb.sh $INSTANCE shell "echo shuttle-instance-$INSTANCE > /private/sf/id.txt"
 run-adb.sh $INSTANCE shell 'cat /private/sf/id.txt'
 run-adb.sh $INSTANCE shell "touch /private/sf/leave$INSTANCE.txt"
 run-adb.sh $INSTANCE shell 'pm grant org.appspot.apprtc android.permission.RECORD_AUDIO'
 run-adb.sh $INSTANCE shell 'pm grant org.appspot.apprtc android.permission.MODIFY_AUDIO_SETTINGS'
 run-adb.sh $INSTANCE shell 'pm grant org.appspot.apprtc android.permission.READ_EXTERNAL_STORAGE'
 run-adb.sh $INSTANCE shell 'pm grant org.appspot.apprtc android.permission.WRITE_EXTERNAL_STORAGE'
-
+run-adb.sh $INSTANCE shell "setprop persist.sys.timezone 'America/Chicago'"
 sleep 2
 
 if [ "$NEWSTREAM" == false ]
